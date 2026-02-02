@@ -45,9 +45,12 @@ try {
       }
     }
     
-    // Auto-renewal
-    if (domain.autorenew) {
-      const status = domain.autorenew.enabled ? '✅ Enabled' : '❌ Disabled';
+    // Auto-renewal (can be boolean or object depending on API response)
+    if (domain.autorenew !== undefined) {
+      const enabled = typeof domain.autorenew === 'boolean' 
+        ? domain.autorenew 
+        : domain.autorenew.enabled;
+      const status = enabled ? '✅ Enabled' : '❌ Disabled';
       console.log(`   Auto-renew: ${status}`);
     }
     
@@ -84,7 +87,13 @@ try {
     console.log(`⚠️  ${expiringSoon.length} domain${expiringSoon.length === 1 ? '' : 's'} expiring within 30 days!`);
   }
   
-  const withoutAutorenew = domains.filter(d => d.autorenew && !d.autorenew.enabled);
+  const withoutAutorenew = domains.filter(d => {
+    if (d.autorenew === undefined) return true; // No autorenew data = disabled
+    const enabled = typeof d.autorenew === 'boolean' 
+      ? d.autorenew 
+      : d.autorenew.enabled;
+    return !enabled;
+  });
   if (withoutAutorenew.length > 0) {
     console.log(`💡 ${withoutAutorenew.length} domain${withoutAutorenew.length === 1 ? '' : 's'} without auto-renewal`);
   }
