@@ -33,6 +33,7 @@ try {
   }
   
   const product = results.products[0];
+  const currency = results.currency || 'USD';
   
   // Display results
   console.log('Domain:', product.name);
@@ -42,19 +43,38 @@ try {
     console.log('✅ Status: AVAILABLE');
     
     // Show pricing
-    if (product.prices) {
+    if (product.prices && product.prices.length > 0) {
       console.log('\n💰 Pricing:');
       product.prices.forEach(price => {
-        console.log(`  ${price.duration_unit}: ${price.price_after_taxes} ${price.currency} (+ ${price.taxes} tax)`);
+        const durationUnit = price.duration_unit === 'y' ? 'year' : price.duration_unit;
+        const minDuration = price.min_duration || 1;
+        const maxDuration = price.max_duration;
+        const durationLabel = maxDuration && maxDuration !== minDuration 
+          ? `${minDuration}-${maxDuration} ${durationUnit}s`
+          : `${minDuration} ${durationUnit}${minDuration > 1 ? 's' : ''}`;
+        
+        const priceAmount = price.price_after_taxes.toFixed(2);
+        
+        // Show discount if available
+        if (price.discount && price.normal_price_after_taxes) {
+          const normalPrice = price.normal_price_after_taxes.toFixed(2);
+          console.log(`  ${durationLabel}: $${priceAmount} ${currency} (normally $${normalPrice})`);
+        } else {
+          console.log(`  ${durationLabel}: $${priceAmount} ${currency}`);
+        }
       });
     }
     
     // Show supported features
-    if (product.process && product.process.length > 0) {
+    if (product.process) {
       console.log('\n📋 Supported Features:');
-      product.process.forEach(feature => {
-        console.log(`  • ${feature}`);
-      });
+      if (Array.isArray(product.process)) {
+        product.process.forEach(feature => {
+          console.log(`  • ${feature}`);
+        });
+      } else {
+        console.log(`  • ${product.process}`);
+      }
     }
     
     // Show TLD info
