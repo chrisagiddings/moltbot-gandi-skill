@@ -16,6 +16,9 @@ Comprehensive Gandi domain registrar integration for Moltbot.
 - ✅ Get domain details (expiration, status, services)
 - ✅ List DNS records for domains
 - ✅ View domain and DNS information
+- ✅ **Domain availability checking** ([#4](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/4))
+- ✅ **Smart domain suggestions with variations** ([#4](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/4))
+- ✅ SSL certificate status checker
 - ✅ Error handling and validation
 
 ## Coming Soon (Phase 2+)
@@ -23,6 +26,7 @@ Comprehensive Gandi domain registrar integration for Moltbot.
 - Domain registration
 - DNS record modification (add, update, delete)
 - Multi-organization support ([#1](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/1))
+- Gateway Console configuration ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3))
 - Domain renewal management
 - DNSSEC configuration
 - Certificate management
@@ -110,6 +114,163 @@ Once configured, you can use natural language:
 
 > "Is auto-renewal enabled for example.com?"
 
+## Domain Availability Checking
+
+### Check Single Domain
+
+Check if a specific domain is available for registration:
+
+```bash
+node check-domain.js example.com
+```
+
+**Features:**
+- Shows availability status (available/unavailable/pending/error)
+- Displays pricing information (registration, renewal, transfer)
+- Lists supported features (DNSSEC, LiveDNS, etc.)
+- Shows TLD information
+
+**Example Output:**
+```
+🔍 Checking availability for: example.com
+
+Domain: example.com
+
+✅ Status: AVAILABLE
+
+💰 Pricing:
+  1 year: 12.00 EUR (+ 2.40 tax)
+  2 years: 24.00 EUR (+ 4.80 tax)
+
+📋 Supported Features:
+  • create
+  • dnssec
+  • livedns
+
+🌐 TLD Information:
+  Extension: com
+```
+
+### Smart Domain Suggestions
+
+Find available alternatives with TLD variations and name modifications:
+
+```bash
+# Check all configured TLDs + variations
+node suggest-domains.js example
+
+# Check specific TLDs only
+node suggest-domains.js example --tlds com,net,io
+
+# Skip name variations (only check TLDs)
+node suggest-domains.js example --no-variations
+
+# Output as JSON
+node suggest-domains.js example --json
+```
+
+**Name Variation Patterns:**
+1. **Hyphenated**: Adds hyphens between word boundaries (`example` → `ex-ample`)
+2. **Abbreviated**: Removes vowels (`example` → `exmpl`)
+3. **Prefix**: Adds common prefixes (`example` → `get-example`, `my-example`)
+4. **Suffix**: Adds common suffixes (`example` → `example-app`, `example-hub`)
+5. **Numbers**: Appends numbers (`example` → `example2`, `example3`)
+
+**Example Output:**
+```
+🔍 Checking availability for: example
+
+📊 Checking 13 TLDs and generating variations...
+
+═══════════════════════════════════════════════════════
+📋 EXACT MATCHES (Different TLDs)
+═══════════════════════════════════════════════════════
+
+✅ Available:
+
+  example.net                    12.00 EUR
+  example.io                     39.00 EUR
+  example.dev                    15.00 EUR
+
+❌ Unavailable:
+
+  example.com                    (unavailable)
+  example.org                    (unavailable)
+
+═══════════════════════════════════════════════════════
+🎨 NAME VARIATIONS
+═══════════════════════════════════════════════════════
+
+Hyphenated:
+
+  ✅ ex-ample.com                12.00 EUR
+
+Prefix:
+
+  ✅ get-example.com             12.00 EUR
+  ✅ my-example.com              12.00 EUR
+
+Suffix:
+
+  ✅ example-app.com             12.00 EUR
+  ✅ example-io.com              12.00 EUR
+
+═══════════════════════════════════════════════════════
+📊 SUMMARY: 8 available domains found
+═══════════════════════════════════════════════════════
+```
+
+### Configuration
+
+Domain checker configuration is stored in `gandi-skill/config/domain-checker-defaults.json`.
+
+**Structure:**
+```json
+{
+  "tlds": {
+    "mode": "extend",
+    "defaults": ["com", "net", "org", "info", "io", "dev", "app", "ai", "tech"],
+    "custom": []
+  },
+  "variations": {
+    "enabled": true,
+    "patterns": ["hyphenated", "abbreviated", "prefix", "suffix", "numbers"],
+    "prefixes": ["get", "my", "the", "try"],
+    "suffixes": ["app", "hub", "io", "ly", "ai", "hq"],
+    "maxNumbers": 3
+  },
+  "rateLimit": {
+    "maxConcurrent": 10,
+    "delayMs": 100
+  }
+}
+```
+
+**TLD Modes:**
+- `"extend"`: Use defaults + custom TLDs (merged list)
+- `"replace"`: Use only custom TLDs (ignore defaults)
+
+**Gateway Console Integration:**
+
+When Gateway Console support is added ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3)), configuration will be available at:
+
+```yaml
+skills:
+  entries:
+    gandi:
+      config:
+        domainChecker:
+          tlds:
+            mode: extend
+            defaults: [...]
+            custom: [...]
+          variations:
+            enabled: true
+            patterns: [...]
+```
+
+See `docs/gateway-config-design.md` for complete configuration architecture.
+
 ## Helper Scripts
 
 All scripts are in `gandi-skill/scripts/`:
@@ -119,6 +280,9 @@ All scripts are in `gandi-skill/scripts/`:
 | `test-auth.js` | Verify authentication works |
 | `list-domains.js` | Show all domains in account |
 | `list-dns.js <domain>` | Show DNS records for domain |
+| `check-domain.js <domain>` | Check single domain availability + pricing |
+| `suggest-domains.js <name>` | Smart domain suggestions with variations |
+| `check-ssl.js` | Check SSL certificate status for all domains |
 | `gandi-api.js` | Core API client (importable) |
 
 ## Configuration

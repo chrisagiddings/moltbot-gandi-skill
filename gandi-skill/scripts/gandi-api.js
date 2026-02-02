@@ -56,6 +56,49 @@ export function readApiUrl() {
 }
 
 /**
+ * Read domain checker configuration
+ * Checks Gateway config first, then falls back to defaults
+ * @returns {Object} Domain checker config
+ */
+export function readDomainCheckerConfig() {
+  const defaultConfigPath = path.join(path.dirname(new URL(import.meta.url).pathname), '../config/domain-checker-defaults.json');
+  
+  try {
+    // TODO: Read from Gateway config when available
+    // const gatewayConfig = readGatewayConfig();
+    // const config = gatewayConfig.skills?.entries?.gandi?.config?.domainChecker;
+    // if (config) return config;
+    
+    // Fallback to defaults
+    if (fs.existsSync(defaultConfigPath)) {
+      return JSON.parse(fs.readFileSync(defaultConfigPath, 'utf8'));
+    }
+  } catch (error) {
+    console.warn('Could not read domain checker config, using hardcoded defaults:', error.message);
+  }
+  
+  // Hardcoded fallback
+  return {
+    tlds: {
+      mode: 'extend',
+      defaults: ['com', 'net', 'org', 'info', 'io', 'dev', 'app', 'ai', 'tech'],
+      custom: []
+    },
+    variations: {
+      enabled: true,
+      patterns: ['hyphenated', 'abbreviated', 'prefix', 'suffix', 'numbers'],
+      prefixes: ['get', 'my', 'the', 'try'],
+      suffixes: ['app', 'hub', 'io', 'ly', 'ai', 'hq'],
+      maxNumbers: 3
+    },
+    rateLimit: {
+      maxConcurrent: 10,
+      delayMs: 100
+    }
+  };
+}
+
+/**
  * Make API request
  * @param {string} endpoint - API endpoint (e.g., '/v5/domain/domains')
  * @param {string} method - HTTP method (GET, POST, PUT, DELETE, PATCH)
@@ -207,14 +250,90 @@ export async function getDnsRecord(domain, name, type) {
  * Check domain availability
  * @param {string[]} domains - Array of domain names to check
  */
+/**
+ * Check availability of one or more domains
+ * @param {string[]} domains - Array of domain names to check
+ * @returns {Promise<Object>} Availability results for each domain
+ */
 export async function checkAvailability(domains) {
-  const params = {};
-  domains.forEach((domain, index) => {
-    params[`name`] = domain; // API accepts multiple 'name' params
-  });
+  if (!Array.isArray(domains)) {
+    domains = [domains];
+  }
   
-  const result = await gandiApi('/v5/domain/check', 'GET', null, params);
+  // Build query params with multiple 'name' parameters
+  const queryString = domains.map(d => `name=${encodeURIComponent(d)}`).join('&');
+  const result = await gandiApi(`/v5/domain/check?${queryString}`, 'GET');
+  
   return result.data;
+}
+
+/**
+ * Generate domain name variations
+ * @param {string} baseName - Base domain name (without TLD)
+ * @param {Object} config - Variation config
+ * @returns {Object} Generated variations grouped by pattern
+ */
+export function generateVariations(baseName, config = {}) {
+  const variations = {
+    hyphenated: [],
+    abbreviated: [],
+    prefix: [],
+    suffix: [],
+    numbers: []
+  };
+  
+  const patterns = config.patterns || ['hyphenated', 'abbreviated', 'prefix', 'suffix', 'numbers'];
+  const prefixes = config.prefixes || ['get', 'my', 'the', 'try'];
+  const suffixes = config.suffixes || ['app', 'hub', 'io', 'ly', 'ai', 'hq'];
+  const maxNumbers = config.maxNumbers || 3;
+  
+  // Hyphenated (insert hyphens between likely word boundaries)
+  if (patterns.includes('hyphenated')) {
+    // Simple strategy: add hyphen before capitals and after common prefixes
+    const hyphenated = baseName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    if (hyphenated !== baseName && !hyphenated.includes('--')) {
+      variations.hyphenated.push(hyphenated);
+    }
+    
+    // Try splitting at vowel boundaries
+    const parts = baseName.match(/[bcdfghjklmnpqrstvwxyz]+[aeiou]+/gi);
+    if (parts && parts.length > 1) {
+      variations.hyphenated.push(parts.join('-').toLowerCase());
+    }
+  }
+  
+  // Abbreviated (remove vowels, keep consonants)
+  if (patterns.includes('abbreviated')) {
+    const abbreviated = baseName.replace(/[aeiou]/gi, '').toLowerCase();
+    if (abbreviated.length >= 3 && abbreviated !== baseName) {
+      variations.abbreviated.push(abbreviated);
+    }
+  }
+  
+  // Prefix variations
+  if (patterns.includes('prefix')) {
+    prefixes.forEach(prefix => {
+      variations.prefix.push(`${prefix}-${baseName}`);
+      variations.prefix.push(`${prefix}${baseName}`);
+    });
+  }
+  
+  // Suffix variations
+  if (patterns.includes('suffix')) {
+    suffixes.forEach(suffix => {
+      variations.suffix.push(`${baseName}-${suffix}`);
+      variations.suffix.push(`${baseName}${suffix}`);
+    });
+  }
+  
+  // Number variations
+  if (patterns.includes('numbers')) {
+    for (let i = 2; i <= maxNumbers + 1; i++) {
+      variations.numbers.push(`${baseName}${i}`);
+    }
+  }
+  
+  return variations;
 }
 
 // If run directly, show usage
@@ -229,6 +348,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('Available functions:');
   console.log('  - readToken()');
   console.log('  - readApiUrl()');
+  console.log('  - readDomainCheckerConfig()');
   console.log('  - gandiApi(endpoint, method, data, queryParams)');
   console.log('  - testAuth()');
   console.log('  - listDomains(options)');
@@ -236,6 +356,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('  - listDnsRecords(domain)');
   console.log('  - getDnsRecord(domain, name, type)');
   console.log('  - checkAvailability(domains)');
+  console.log('  - generateVariations(baseName, config)');
   console.log('');
   console.log('Configuration:');
   console.log(`  Token: ${TOKEN_FILE}`);
