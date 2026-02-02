@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Environment
+.env
+.env.local
+
+# Credentials (NEVER commit these!)
+*.key
+*.pem
+api_key
+api_secret
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test files
+test-output/
+*.log
+
+# Temp files
+tmp/
+temp/
