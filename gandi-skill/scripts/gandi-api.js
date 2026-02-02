@@ -56,6 +56,68 @@ export function readApiUrl() {
 }
 
 /**
+ * Rate limiter for API calls
+ */
+class RateLimiter {
+  constructor(config) {
+    this.maxConcurrent = config.maxConcurrent || 3;
+    this.delayMs = config.delayMs || 200;
+    this.maxRequestsPerMinute = config.maxRequestsPerMinute || 100;
+    this.activeRequests = 0;
+    this.requestTimes = [];
+    this.queue = [];
+  }
+  
+  async throttle(fn) {
+    // Wait if we're at max concurrent requests
+    while (this.activeRequests >= this.maxConcurrent) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    // Check requests per minute limit
+    const now = Date.now();
+    const oneMinuteAgo = now - 60000;
+    this.requestTimes = this.requestTimes.filter(t => t > oneMinuteAgo);
+    
+    if (this.requestTimes.length >= this.maxRequestsPerMinute) {
+      const oldestRequest = this.requestTimes[0];
+      const waitTime = 60000 - (now - oldestRequest);
+      if (waitTime > 0) {
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+    
+    // Execute the request
+    this.activeRequests++;
+    this.requestTimes.push(Date.now());
+    
+    try {
+      const result = await fn();
+      return result;
+    } finally {
+      this.activeRequests--;
+      // Delay between requests
+      if (this.delayMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.delayMs));
+      }
+    }
+  }
+}
+
+let rateLimiter = null;
+
+/**
+ * Get or create rate limiter instance
+ */
+export function getRateLimiter(config = null) {
+  if (!rateLimiter || config) {
+    const limiterConfig = config || readDomainCheckerConfig().rateLimit;
+    rateLimiter = new RateLimiter(limiterConfig);
+  }
+  return rateLimiter;
+}
+
+/**
  * Read domain checker configuration
  * Checks Gateway config first, then falls back to defaults
  * @returns {Object} Domain checker config
@@ -92,8 +154,13 @@ export function readDomainCheckerConfig() {
       maxNumbers: 3
     },
     rateLimit: {
-      maxConcurrent: 10,
-      delayMs: 100
+      maxConcurrent: 3,
+      delayMs: 200,
+      maxRequestsPerMinute: 100
+    },
+    limits: {
+      maxTlds: 5,
+      maxVariations: 10
     }
   };
 }
@@ -349,6 +416,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('  - readToken()');
   console.log('  - readApiUrl()');
   console.log('  - readDomainCheckerConfig()');
+  console.log('  - getRateLimiter(config)');
   console.log('  - gandiApi(endpoint, method, data, queryParams)');
   console.log('  - testAuth()');
   console.log('  - listDomains(options)');

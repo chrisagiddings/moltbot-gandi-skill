@@ -240,11 +240,25 @@ Domain checker configuration is stored in `gandi-skill/config/domain-checker-def
     "maxNumbers": 3
   },
   "rateLimit": {
-    "maxConcurrent": 10,
-    "delayMs": 100
+    "maxConcurrent": 3,
+    "delayMs": 200,
+    "maxRequestsPerMinute": 100
+  },
+  "limits": {
+    "maxTlds": 5,
+    "maxVariations": 10
   }
 }
 ```
+
+**Rate Limiting & Limits:**
+- **maxConcurrent**: Maximum concurrent API requests (default: 3)
+- **delayMs**: Delay between requests in milliseconds (default: 200ms)
+- **maxRequestsPerMinute**: Hard limit on requests per minute (default: 100, Gandi allows 1000)
+- **maxTlds**: Maximum TLDs to check in suggest-domains.js (default: 5)
+- **maxVariations**: Maximum name variations to generate (default: 10)
+
+These limits ensure good API citizenship and prevent overwhelming Gandi's API.
 
 **TLD Modes:**
 - `"extend"`: Use defaults + custom TLDs (merged list)

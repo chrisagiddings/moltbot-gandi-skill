@@ -32,7 +32,12 @@
     "maxNumbers": 3
   },
   "rateLimit": {
-    "maxConcurrent": 10,
-    "delayMs": 100
+    "maxConcurrent": 3,
+    "delayMs": 200,
+    "maxRequestsPerMinute": 100
+  },
+  "limits": {
+    "maxTlds": 5,
+    "maxVariations": 10
   }
 }

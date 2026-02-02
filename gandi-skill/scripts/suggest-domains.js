@@ -11,7 +11,7 @@
  *   node suggest-domains.js example --no-variations
  */
 
-import { checkAvailability, generateVariations, readDomainCheckerConfig } from './gandi-api.js';
+import { checkAvailability, generateVariations, readDomainCheckerConfig, getRateLimiter } from './gandi-api.js';
 
 // Parse arguments
 const args = process.argv.slice(2);
@@ -23,6 +23,11 @@ if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
   console.log('  --no-variations      Skip name variations, only check TLDs');
   console.log('  --variations-only    Skip exact TLD matches, only show variations');
   console.log('  --json               Output as JSON');
+  console.log('');
+  console.log('Limits (configurable in config/domain-checker-defaults.json):');
+  console.log('  • Max TLDs: 5 (default)');
+  console.log('  • Max variations: 10 (default)');
+  console.log('  • Rate limit: 3 concurrent, 200ms delay, 100 req/min max');
   console.log('');
   console.log('Examples:');
   console.log('  node suggest-domains.js example');
@@ -44,6 +49,7 @@ const baseName = input.includes('.') ? input.split('.')[0] : input;
 
 // Load config
 const config = readDomainCheckerConfig();
+const rateLimiter = getRateLimiter(config.rateLimit);
 
 // Determine TLD list
 let tlds = [];
@@ -56,6 +62,15 @@ if (flags.tlds) {
   } else {
     tlds = [...tldConfig.defaults, ...tldConfig.custom];
   }
+}
+
+// Apply TLD limit
+const maxTlds = config.limits?.maxTlds || 5;
+if (tlds.length > maxTlds && !flags.tlds) {
+  if (!flags.json) {
+    console.log(`ℹ️  Limiting to ${maxTlds} TLDs (configurable in config)`);
+  }
+  tlds = tlds.slice(0, maxTlds);
 }
 
 if (!flags.json) {
@@ -73,29 +88,34 @@ try {
   if (!flags.variationsOnly) {
     const exactDomains = tlds.map(tld => `${baseName}.${tld}`);
     
-    // Batch check (API supports multiple domains)
-    const batchSize = config.rateLimit?.maxConcurrent || 10;
-    const delayMs = config.rateLimit?.delayMs || 100;
+    if (!flags.json) {
+      console.log(`Checking ${exactDomains.length} exact TLD matches...`);
+    }
     
-    for (let i = 0; i < exactDomains.length; i += batchSize) {
-      const batch = exactDomains.slice(i, i + batchSize);
-      const batchResults = await checkAvailability(batch);
-      
-      if (batchResults && batchResults.products) {
-        batchResults.products.forEach(product => {
+    // Check each domain individually with rate limiting
+    // (batch checking has issues - see #5)
+    for (const domain of exactDomains) {
+      try {
+        const result = await rateLimiter.throttle(async () => {
+          return await checkAvailability([domain]);
+        });
+        
+        if (result && result.products && result.products.length > 0) {
+          const product = result.products[0];
+          const currency = result.currency || 'USD';
           results.exact.push({
             domain: product.name,
             available: product.status === 'available',
             status: product.status,
-            price: product.prices ? `${product.prices[0].price_after_taxes} ${product.prices[0].currency}` : null,
+            price: product.prices ? `${product.prices[0].price_after_taxes.toFixed(2)} ${currency}` : null,
             tld: product.tld
           });
-        });
-      }
-      
-      // Rate limiting delay between batches
-      if (i + batchSize < exactDomains.length && delayMs > 0) {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      } catch (error) {
+        // Continue on error for individual domains
+        if (!flags.json) {
+          console.error(`  ⚠️  Error checking ${domain}: ${error.message}`);
+        }
       }
     }
   }
@@ -104,34 +124,61 @@ try {
   if (!flags.noVariations && config.variations?.enabled) {
     const variations = generateVariations(baseName, config.variations);
     
+    // Flatten all variations and cap to maxVariations
+    const maxVariations = config.limits?.maxVariations || 10;
+    let allVariationNames = [];
     for (const [pattern, names] of Object.entries(variations)) {
-      if (names.length === 0) continue;
+      allVariationNames.push(...names.map(name => ({ pattern, name })));
+    }
+    
+    if (allVariationNames.length > maxVariations) {
+      if (!flags.json) {
+        console.log(`ℹ️  Limiting to ${maxVariations} variations (configurable in config)`);
+      }
+      allVariationNames = allVariationNames.slice(0, maxVariations);
+    }
+    
+    if (!flags.json && allVariationNames.length > 0) {
+      console.log(`Checking ${allVariationNames.length} name variations...`);
+    }
+    
+    // Check variations
+    const primaryTlds = flags.tlds ? flags.tlds.slice(0, 2) : config.tlds.defaults.slice(0, 2); // Just com, net
+    
+    for (const { pattern, name } of allVariationNames) {
+      if (!results.variations[pattern]) {
+        results.variations[pattern] = [];
+      }
       
-      results.variations[pattern] = [];
-      
-      // For each variation, check with primary TLDs
-      const primaryTlds = flags.tlds || config.tlds.defaults.slice(0, 3); // Default: com, net, org
-      
-      for (const name of names) {
-        const variantDomains = primaryTlds.map(tld => `${name}.${tld}`);
-        const variantResults = await checkAvailability(variantDomains);
+      // Check each TLD for this variation
+      for (const tld of primaryTlds) {
+        const domain = `${name}.${tld}`;
         
-        if (variantResults && variantResults.products) {
-          variantResults.products.forEach(product => {
+        try {
+          const result = await rateLimiter.throttle(async () => {
+            return await checkAvailability([domain]);
+          });
+          
+          if (result && result.products && result.products.length > 0) {
+            const product = result.products[0];
+            const currency = result.currency || 'USD';
+            
             if (product.status === 'available') {
               results.variations[pattern].push({
                 domain: product.name,
                 available: true,
                 status: product.status,
-                price: product.prices ? `${product.prices[0].price_after_taxes} ${product.prices[0].currency}` : null,
+                price: product.prices ? `${product.prices[0].price_after_taxes.toFixed(2)} ${currency}` : null,
                 tld: product.tld
               });
             }
-          });
+          }
+        } catch (error) {
+          // Continue on error
+          if (!flags.json) {
+            console.error(`  ⚠️  Error checking ${domain}: ${error.message}`);
+          }
         }
-        
-        // Rate limiting
-        await new Promise(resolve => setTimeout(resolve, config.rateLimit?.delayMs || 100));
       }
     }
   }
