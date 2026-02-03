@@ -18,6 +18,8 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 
 ✅ **Phase 7 - Multi-Organization Support Complete** - Manage multiple Gandi organizations with profile-based token management.
 
+✅ **Phase 8 - Gateway Console Integration Complete** - Full UI configuration support through Moltbot Gateway Console with schema and helpers.
+
 ## Features
 
 ### ✅ Currently Available
@@ -89,8 +91,7 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 
 ### 🚧 Coming Soon
 
-- Gateway Console configuration ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3))
-- Email forwarding configuration ([#11](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/11))
+None - all planned features complete!
 
 ## Requirements
 
@@ -120,7 +121,96 @@ cp -r gandi-skill ~/.moltbot/skills/
 ln -s $(pwd)/gandi-skill ~/.moltbot/skills/gandi
 ```
 
+## Configuration
+
+### Gateway Console (Recommended) ✨ NEW
+
+The easiest way to configure the Gandi skill is through the Moltbot Gateway Console UI.
+
+**Configuration Path:** Skills → gandi → Config
+
+#### Single Organization (Simple)
+
+```yaml
+skills:
+  entries:
+    gandi:
+      enabled: true
+      config:
+        apiToken: "${GANDI_API_TOKEN}"  # Environment variable reference
+```
+
+#### Multiple Organizations
+
+```yaml
+skills:
+  entries:
+    gandi:
+      enabled: true
+      config:
+        organizations:
+          - name: "personal"
+            label: "Personal Domains"
+            apiToken: "${GANDI_TOKEN_PERSONAL}"
+            sharingId: "17672a84-e05e-11e7-b536-00163e6dc886"
+            default: true
+          - name: "work"
+            label: "Work Organization"
+            apiToken: "${GANDI_TOKEN_WORK}"
+            sharingId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+```
+
+#### Domain Checker Configuration
+
+```yaml
+skills:
+  entries:
+    gandi:
+      enabled: true
+      config:
+        apiToken: "${GANDI_API_TOKEN}"
+        domainChecker:
+          tlds:
+            mode: "extend"  # or "replace"
+            custom: ["co.uk", "eu", "de"]
+          limits:
+            maxTlds: 5
+            maxVariations: 10
+          rateLimit:
+            maxRequestsPerMinute: 100
+```
+
+**Benefits:**
+- ✅ Centralized configuration management
+- ✅ Environment variable support (`${VAR_NAME}`)
+- ✅ Multi-organization support built-in
+- ✅ UI-based editing (no manual JSON editing)
+- ✅ Automatic validation
+- ✅ Secure token storage
+
+**Configuration Schema:** See `gandi-skill/config.schema.json` for complete schema
+
+**Check Configuration Status:**
+```bash
+node config-status.js
+```
+
 ## Setup
+
+### Option 1: Gateway Console (Recommended)
+
+1. Open Moltbot Gateway Console
+2. Navigate to Skills → gandi → Config
+3. Enable the skill
+4. Add your API token (see below for how to get one)
+5. Optionally configure domain checker preferences
+6. Save configuration
+
+### Option 2: Profile-Based (Multi-Organization)
+
+See [Multi-Organization Management](#16-multi-organization-management-%EF%B8%8F-new) section below.
+
+### Option 3: Legacy File-Based
 
 ### 1. Create Personal Access Token
 
