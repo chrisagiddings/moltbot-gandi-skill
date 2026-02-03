@@ -8,16 +8,23 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 
 ✅ **Phase 2 - DNS Modification Complete** - Full DNS record management with create, update, delete, and zone snapshots.
 
+✅ **Phase 3 - Domain Registration & Renewal Complete** - Register new domains and renew existing ones with comprehensive safety features.
+
 ## Features
 
 ### ✅ Currently Available
 
 - **Authentication** - Personal Access Token (PAT) support
-- **Domain Management**
+- **Domain Management** ✨ NEW
   - List all domains in your account
   - Get detailed domain information
   - Check domain expiration and auto-renewal status
   - View domain services (LiveDNS, Email, etc.)
+  - **Register new domains** with availability pre-check and pricing
+  - **Renew existing domains** with cost calculation
+  - **Configure auto-renewal** settings
+  - Multiple confirmation steps for paid operations
+  - Dry-run mode for testing without charges
 - **Domain Availability Checking**
   - Single domain lookup with pricing
   - Smart domain suggestions with name variations
@@ -41,9 +48,8 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
   - Configurable concurrent request limits
   - Automatic throttling and queuing
 
-### 🚧 Coming Soon (Phase 2+)
+### 🚧 Coming Soon (Phase 3+)
 
-- Domain registration and renewal ([#7](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/7))
 - Multi-organization support ([#1](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/1))
 - Gateway Console configuration ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3))
 - DNSSEC configuration ([#9](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/9))
@@ -87,8 +93,9 @@ ln -s $(pwd)/gandi-skill ~/.moltbot/skills/gandi
 3. Select your organization
 4. Choose scopes:
    - ✅ **Domain: read** (required for domain listing)
+   - ✅ **Domain: write** (required for registration & renewal) ✨ NEW
    - ✅ **LiveDNS: read** (required for DNS viewing)
-   - ✅ **LiveDNS: write** (required for DNS modifications) ✨ NEW
+   - ✅ **LiveDNS: write** (required for DNS modifications)
 5. Copy the token (you won't see it again!)
 
 ### 2. Store Token
@@ -276,6 +283,90 @@ node manage-snapshots.js example.com restore abc123-uuid --confirm
 - Restore entire zone configuration
 - View snapshot creation dates
 - Distinguish automatic vs manual snapshots
+
+#### 10. Register New Domains ✨ NEW
+
+```bash
+# Check availability and pricing (dry-run)
+node register-domain.js example.com --dry-run
+
+# Register a domain
+node register-domain.js example.com --years 2 --contact owner.json
+
+# Register with auto-renewal enabled
+node register-domain.js example.com --years 1 --auto-renew --contact owner.json
+```
+
+**⚠️  WARNING: Domain registration costs real money and is NON-REFUNDABLE!**
+
+**Features:**
+- Pre-check availability with pricing
+- Multiple confirmation steps
+- Contact information validation
+- Dry-run mode for testing
+- Shows total cost before charging
+- Optional auto-renewal configuration
+
+**Contact JSON Format:**
+```json
+{
+  "given": "John",
+  "family": "Doe",
+  "email": "john@example.com",
+  "streetaddr": "123 Main St",
+  "city": "Paris",
+  "zip": "75001",
+  "country": "FR",
+  "phone": "+33.123456789",
+  "type": "individual"
+}
+```
+
+**Contact Types:** `individual`, `company`, `association`, `publicbody`
+
+#### 11. Renew Existing Domains ✨ NEW
+
+```bash
+# Check renewal pricing (dry-run)
+node renew-domain.js example.com --dry-run
+
+# Renew a domain
+node renew-domain.js example.com --years 1
+
+# Renew for multiple years
+node renew-domain.js example.com --years 3
+```
+
+**⚠️  WARNING: Domain renewal costs real money and is NON-REFUNDABLE!**
+
+**Features:**
+- Shows current expiration and days remaining
+- Calculates new expiration date
+- Multiple confirmation steps
+- Dry-run mode for pricing check
+- Shows auto-renewal status
+
+#### 12. Configure Auto-Renewal ✨ NEW
+
+```bash
+# Check current auto-renewal status
+node configure-autorenew.js example.com status
+
+# Enable auto-renewal
+node configure-autorenew.js example.com enable
+
+# Enable with custom duration
+node configure-autorenew.js example.com enable --years 2
+
+# Disable auto-renewal
+node configure-autorenew.js example.com disable
+```
+
+**Auto-Renewal Features:**
+- Enable/disable automatic renewal
+- Configure renewal duration (1-10 years)
+- View current settings
+- Prevents accidental domain loss
 
 ### From Moltbot
 

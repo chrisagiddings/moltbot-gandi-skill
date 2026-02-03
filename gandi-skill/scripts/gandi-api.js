@@ -488,6 +488,90 @@ export async function restoreSnapshot(domain, snapshotId) {
 }
 
 /**
+ * Domain registration and renewal
+ */
+
+/**
+ * Register a new domain
+ * @param {string} domain - Domain name (FQDN)
+ * @param {number} duration - Registration duration in years (1-10)
+ * @param {Object} owner - Owner contact information
+ * @param {Object} options - Additional options (admin, tech, bill contacts, autorenew)
+ * @returns {Promise<Object>} Registration result with operation details
+ */
+export async function registerDomain(domain, duration, owner, options = {}) {
+  const data = {
+    fqdn: domain,
+    duration: duration,
+    owner: owner
+  };
+  
+  // Use shortcuts for other contacts if not provided
+  data.admin = options.admin || 'owner';
+  data.tech = options.tech || 'owner';
+  data.bill = options.bill || 'owner';
+  
+  // Optional settings
+  if (options.nameservers) {
+    data.nameservers = options.nameservers;
+  }
+  
+  if (options.extra_parameters) {
+    data.extra_parameters = options.extra_parameters;
+  }
+  
+  const result = await gandiApi('/v5/domain/domains', 'POST', data);
+  return result.data;
+}
+
+/**
+ * Renew a domain
+ * @param {string} domain - Domain name (FQDN)
+ * @param {number} duration - Renewal duration in years (1-10)
+ * @returns {Promise<Object>} Renewal result with operation details
+ */
+export async function renewDomain(domain, duration) {
+  const data = {
+    duration: duration
+  };
+  
+  const result = await gandiApi(`/v5/domain/domains/${domain}/renew`, 'POST', data);
+  return result.data;
+}
+
+/**
+ * Get auto-renewal settings for a domain
+ * @param {string} domain - Domain name (FQDN)
+ * @returns {Promise<Object>} Auto-renewal configuration
+ */
+export async function getAutoRenewal(domain) {
+  const result = await gandiApi(`/v5/domain/domains/${domain}/autorenew`);
+  return result.data;
+}
+
+/**
+ * Update auto-renewal settings for a domain
+ * @param {string} domain - Domain name (FQDN)
+ * @param {boolean} enabled - Enable or disable auto-renewal
+ * @param {number} duration - Renewal duration in years (default: 1)
+ * @param {string} orgId - Organization ID (optional)
+ * @returns {Promise<Object>} Updated auto-renewal settings
+ */
+export async function setAutoRenewal(domain, enabled, duration = 1, orgId = null) {
+  const data = {
+    enabled: enabled,
+    duration: duration
+  };
+  
+  if (orgId) {
+    data.org_id = orgId;
+  }
+  
+  const result = await gandiApi(`/v5/domain/domains/${domain}/autorenew`, 'PUT', data);
+  return result.data;
+}
+
+/**
  * Validation helpers
  */
 
@@ -639,6 +723,55 @@ export function validateRecordValue(type, value) {
   return { valid: true };
 }
 
+/**
+ * Validate contact information for domain registration
+ * @param {Object} contact - Contact object
+ * @returns {Object} { valid: boolean, errors: string[] }
+ */
+export function validateContact(contact) {
+  const errors = [];
+  
+  // Required fields
+  const requiredFields = ['given', 'family', 'email', 'streetaddr', 'city', 'zip', 'country', 'phone', 'type'];
+  
+  requiredFields.forEach(field => {
+    if (!contact[field] || contact[field].toString().trim() === '') {
+      errors.push(`Missing required field: ${field}`);
+    }
+  });
+  
+  // Validate email format
+  if (contact.email && !contact.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+    errors.push('Invalid email address format');
+  }
+  
+  // Validate phone format (basic check for + and digits)
+  if (contact.phone && !contact.phone.match(/^\+?[\d\s\.\-()]+$/)) {
+    errors.push('Invalid phone number format (use +CC.NNNNNNNN)');
+  }
+  
+  // Validate country code (must be 2 letters)
+  if (contact.country && !contact.country.match(/^[A-Z]{2}$/)) {
+    errors.push('Country must be 2-letter ISO code (e.g., US, FR, GB)');
+  }
+  
+  // Validate contact type
+  const validTypes = ['individual', 'company', 'association', 'publicbody'];
+  if (contact.type && !validTypes.includes(contact.type)) {
+    errors.push(`Contact type must be one of: ${validTypes.join(', ')}`);
+  }
+  
+  // If type is company, orgname is required
+  if (contact.type === 'company' && (!contact.orgname || contact.orgname.trim() === '')) {
+    errors.push('Organization name required for company type');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors: errors
+  };
+}
+
 // If run directly, show usage
 if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('Gandi API Client');
@@ -667,11 +800,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('  - restoreSnapshot(domain, snapshotId)');
   console.log('  - checkAvailability(domains)');
   console.log('  - generateVariations(baseName, config)');
+  console.log('  - registerDomain(domain, duration, owner, options)');
+  console.log('  - renewDomain(domain, duration)');
+  console.log('  - getAutoRenewal(domain)');
+  console.log('  - setAutoRenewal(domain, enabled, duration, orgId)');
   console.log('  - isValidIPv4(ip)');
   console.log('  - isValidIPv6(ip)');
   console.log('  - isValidHostname(hostname)');
   console.log('  - isValidTTL(ttl)');
   console.log('  - validateRecordValue(type, value)');
+  console.log('  - validateContact(contact)');
   console.log('');
   console.log('Configuration:');
   console.log(`  Token: ${TOKEN_FILE}`);
