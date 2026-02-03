@@ -6,6 +6,8 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 
 ✅ **Phase 1 MVP Complete** - Basic domain management, DNS operations, and domain availability checking functional.
 
+✅ **Phase 2 - DNS Modification Complete** - Full DNS record management with create, update, delete, and zone snapshots.
+
 ## Features
 
 ### ✅ Currently Available
@@ -21,10 +23,15 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
   - Smart domain suggestions with name variations
   - TLD alternatives (com, net, org, io, dev, app, ai, tech, etc.)
   - Rate limiting and API citizenship
-- **DNS Operations**
+- **DNS Operations** ✨ NEW
   - List DNS records for any domain
   - View record details by type
   - Check nameserver configuration
+  - **Create/update DNS records** (A, AAAA, CNAME, MX, TXT, NS, SRV, CAA)
+  - **Delete DNS records** with safety confirmations
+  - **Zone snapshots** (create, list, restore)
+  - Automatic snapshots before modifications
+  - Input validation for all record types
 - **SSL Certificate Monitoring**
   - Check SSL status for all domains
   - Certificate issuer identification
@@ -36,13 +43,12 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 
 ### 🚧 Coming Soon (Phase 2+)
 
-- Domain registration and renewal
-- DNS record modification (add, update, delete)
+- Domain registration and renewal ([#7](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/7))
 - Multi-organization support ([#1](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/1))
 - Gateway Console configuration ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3))
-- DNSSEC configuration
-- Certificate management
-- Email forwarding configuration
+- DNSSEC configuration ([#9](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/9))
+- Certificate management ([#10](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/10))
+- Email forwarding configuration ([#11](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/11))
 
 ## Requirements
 
@@ -81,8 +87,8 @@ ln -s $(pwd)/gandi-skill ~/.moltbot/skills/gandi
 3. Select your organization
 4. Choose scopes:
    - ✅ **Domain: read** (required for domain listing)
-   - ✅ **LiveDNS: read** (required for DNS operations)
-   - Optional: Add write scopes for future features
+   - ✅ **LiveDNS: read** (required for DNS viewing)
+   - ✅ **LiveDNS: write** (required for DNS modifications) ✨ NEW
 5. Copy the token (you won't see it again!)
 
 ### 2. Store Token
@@ -209,6 +215,67 @@ node check-ssl.js
 ```
 
 Scans all domains for SSL certificate status, shows issuers, expiration dates, and warnings for missing certificates.
+
+#### 6. Add/Update DNS Records ✨ NEW
+
+```bash
+node add-dns-record.js example.com A www 192.0.2.1
+node add-dns-record.js example.com CNAME blog example.com. 3600
+node add-dns-record.js example.com MX @ "10 mail.example.com."
+node add-dns-record.js example.com TXT @ "v=spf1 include:_spf.google.com ~all"
+```
+
+**Features:**
+- Creates new records or updates existing ones
+- Automatic snapshot before modifications
+- Input validation for all record types
+- Shows current record before updating
+- Supports custom TTL values
+
+**Supported Record Types:**
+A, AAAA, CNAME, MX, TXT, NS, SRV, CAA, PTR
+
+#### 7. Update DNS Records ✨ NEW
+
+```bash
+node update-dns-record.js example.com A www 192.0.2.10
+node update-dns-record.js example.com TXT @ "v=spf1 ..."
+```
+
+Convenience wrapper around add-dns-record.js with update-focused messaging.
+
+#### 8. Delete DNS Records ✨ NEW
+
+```bash
+node delete-dns-record.js example.com A temp --confirm
+node delete-dns-record.js example.com CNAME staging --confirm
+```
+
+**Safety Features:**
+- Shows current record before deletion
+- Requires confirmation (or --confirm flag)
+- Extra warnings for critical records (@, www, mail, NS, MX)
+- Automatic snapshot before deletion
+- Cannot be undone (except via snapshot restore)
+
+#### 9. Manage Zone Snapshots ✨ NEW
+
+```bash
+# List all snapshots
+node manage-snapshots.js example.com list
+
+# Create a snapshot
+node manage-snapshots.js example.com create "Before DNS migration"
+
+# Restore from snapshot
+node manage-snapshots.js example.com restore abc123-uuid --confirm
+```
+
+**Snapshot Features:**
+- Manual and automatic snapshots
+- Restore entire zone configuration
+- View snapshot creation dates
+- Distinguish automatic vs manual snapshots
 
 ### From Moltbot
 

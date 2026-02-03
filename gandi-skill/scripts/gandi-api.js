@@ -403,6 +403,242 @@ export function generateVariations(baseName, config = {}) {
   return variations;
 }
 
+/**
+ * Create or update a DNS record
+ * @param {string} domain - Domain name (FQDN)
+ * @param {string} name - Record name (e.g., '@', 'www', 'mail')
+ * @param {string} type - Record type (e.g., 'A', 'CNAME', 'MX', 'TXT')
+ * @param {string[]} values - Array of record values
+ * @param {number} ttl - Time to live in seconds (default: 10800)
+ * @returns {Promise<Object>} API response
+ */
+export async function createDnsRecord(domain, name, type, values, ttl = 10800) {
+  // Ensure values is an array
+  if (!Array.isArray(values)) {
+    values = [values];
+  }
+  
+  const data = {
+    rrset_ttl: ttl,
+    rrset_values: values
+  };
+  
+  const result = await gandiApi(`/v5/livedns/domains/${domain}/records/${name}/${type}`, 'PUT', data);
+  return result;
+}
+
+/**
+ * Delete a DNS record
+ * @param {string} domain - Domain name (FQDN)
+ * @param {string} name - Record name
+ * @param {string} type - Record type
+ * @returns {Promise<Object>} API response
+ */
+export async function deleteDnsRecord(domain, name, type) {
+  const result = await gandiApi(`/v5/livedns/domains/${domain}/records/${name}/${type}`, 'DELETE');
+  return result;
+}
+
+/**
+ * Replace all DNS records for a domain (bulk update)
+ * @param {string} domain - Domain name (FQDN)
+ * @param {Array} records - Array of record objects with rrset_name, rrset_type, rrset_ttl, rrset_values
+ * @returns {Promise<Object>} API response
+ */
+export async function replaceDnsRecords(domain, records) {
+  const data = {
+    items: records
+  };
+  
+  const result = await gandiApi(`/v5/livedns/domains/${domain}/records`, 'PUT', data);
+  return result;
+}
+
+/**
+ * Create a DNS zone snapshot
+ * @param {string} domain - Domain name (FQDN)
+ * @param {string} name - Snapshot name/description
+ * @returns {Promise<Object>} Snapshot details
+ */
+export async function createSnapshot(domain, name) {
+  const data = { name };
+  const result = await gandiApi(`/v5/livedns/domains/${domain}/snapshots`, 'POST', data);
+  return result.data;
+}
+
+/**
+ * List DNS zone snapshots
+ * @param {string} domain - Domain name (FQDN)
+ * @returns {Promise<Array>} Array of snapshots
+ */
+export async function listSnapshots(domain) {
+  const result = await gandiApi(`/v5/livedns/domains/${domain}/snapshots`);
+  return result.data;
+}
+
+/**
+ * Restore DNS zone from snapshot
+ * @param {string} domain - Domain name (FQDN)
+ * @param {string} snapshotId - Snapshot UUID
+ * @returns {Promise<Object>} API response
+ */
+export async function restoreSnapshot(domain, snapshotId) {
+  const result = await gandiApi(`/v5/livedns/domains/${domain}/snapshots/${snapshotId}`, 'POST');
+  return result.data;
+}
+
+/**
+ * Validation helpers
+ */
+
+/**
+ * Validate IPv4 address
+ * @param {string} ip - IP address to validate
+ * @returns {boolean} True if valid
+ */
+export function isValidIPv4(ip) {
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  if (!ipv4Regex.test(ip)) return false;
+  
+  const parts = ip.split('.');
+  return parts.every(part => {
+    const num = parseInt(part, 10);
+    return num >= 0 && num <= 255;
+  });
+}
+
+/**
+ * Validate IPv6 address
+ * @param {string} ip - IPv6 address to validate
+ * @returns {boolean} True if valid
+ */
+export function isValidIPv6(ip) {
+  const ipv6Regex = /^([\da-f]{1,4}:){7}[\da-f]{1,4}$/i;
+  const ipv6CompressedRegex = /^([\da-f]{1,4}:)*::([\da-f]{1,4}:)*[\da-f]{1,4}$/i;
+  const ipv6MixedRegex = /^([\da-f]{1,4}:){6}(\d{1,3}\.){3}\d{1,3}$/i;
+  
+  return ipv6Regex.test(ip) || ipv6CompressedRegex.test(ip) || ipv6MixedRegex.test(ip);
+}
+
+/**
+ * Validate domain/hostname (FQDN)
+ * @param {string} hostname - Hostname to validate
+ * @returns {boolean} True if valid
+ */
+export function isValidHostname(hostname) {
+  // Allow @ for root domain
+  if (hostname === '@') return true;
+  
+  // Allow wildcards
+  if (hostname.startsWith('*.')) {
+    hostname = hostname.substring(2);
+  }
+  
+  const hostnameRegex = /^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.?$/i;
+  return hostnameRegex.test(hostname);
+}
+
+/**
+ * Validate TTL value
+ * @param {number} ttl - TTL in seconds
+ * @returns {boolean} True if valid
+ */
+export function isValidTTL(ttl) {
+  const num = parseInt(ttl, 10);
+  return !isNaN(num) && num >= 300 && num <= 2592000;
+}
+
+/**
+ * Validate DNS record value based on type
+ * @param {string} type - Record type
+ * @param {string} value - Record value
+ * @returns {Object} { valid: boolean, error: string }
+ */
+export function validateRecordValue(type, value) {
+  switch (type.toUpperCase()) {
+    case 'A':
+      if (!isValidIPv4(value)) {
+        return { valid: false, error: 'Invalid IPv4 address' };
+      }
+      break;
+      
+    case 'AAAA':
+      if (!isValidIPv6(value)) {
+        return { valid: false, error: 'Invalid IPv6 address' };
+      }
+      break;
+      
+    case 'CNAME':
+    case 'NS':
+      if (!isValidHostname(value)) {
+        return { valid: false, error: 'Invalid hostname (use FQDN with trailing dot, e.g., example.com.)' };
+      }
+      break;
+      
+    case 'MX':
+      // MX format: "priority hostname" (e.g., "10 mail.example.com.")
+      const mxParts = value.split(' ');
+      if (mxParts.length !== 2) {
+        return { valid: false, error: 'MX record must be: "priority hostname" (e.g., "10 mail.example.com.")' };
+      }
+      const priority = parseInt(mxParts[0], 10);
+      if (isNaN(priority) || priority < 0 || priority > 65535) {
+        return { valid: false, error: 'MX priority must be between 0 and 65535' };
+      }
+      if (!isValidHostname(mxParts[1])) {
+        return { valid: false, error: 'Invalid MX hostname' };
+      }
+      break;
+      
+    case 'TXT':
+      // TXT records should be in quotes, but API accepts them without
+      // Just check it's not empty
+      if (!value || value.trim().length === 0) {
+        return { valid: false, error: 'TXT record cannot be empty' };
+      }
+      break;
+      
+    case 'SRV':
+      // SRV format: "priority weight port target"
+      const srvParts = value.split(' ');
+      if (srvParts.length !== 4) {
+        return { valid: false, error: 'SRV record must be: "priority weight port target"' };
+      }
+      const [srvPriority, weight, port, target] = srvParts;
+      if (isNaN(parseInt(srvPriority)) || isNaN(parseInt(weight)) || isNaN(parseInt(port))) {
+        return { valid: false, error: 'SRV priority, weight, and port must be numbers' };
+      }
+      if (!isValidHostname(target)) {
+        return { valid: false, error: 'Invalid SRV target hostname' };
+      }
+      break;
+      
+    case 'CAA':
+      // CAA format: "flags tag value" (e.g., "0 issue \"letsencrypt.org\"")
+      const caaParts = value.split(' ');
+      if (caaParts.length < 3) {
+        return { valid: false, error: 'CAA record must be: "flags tag value"' };
+      }
+      const flags = parseInt(caaParts[0], 10);
+      if (isNaN(flags) || flags < 0 || flags > 255) {
+        return { valid: false, error: 'CAA flags must be between 0 and 255' };
+      }
+      const tag = caaParts[1];
+      if (!['issue', 'issuewild', 'iodef'].includes(tag)) {
+        return { valid: false, error: 'CAA tag must be issue, issuewild, or iodef' };
+      }
+      break;
+      
+    default:
+      // For other record types, just check it's not empty
+      if (!value || value.trim().length === 0) {
+        return { valid: false, error: `${type} record value cannot be empty` };
+      }
+  }
+  
+  return { valid: true };
+}
+
 // If run directly, show usage
 if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('Gandi API Client');
@@ -423,8 +659,19 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('  - getDomain(domain)');
   console.log('  - listDnsRecords(domain)');
   console.log('  - getDnsRecord(domain, name, type)');
+  console.log('  - createDnsRecord(domain, name, type, values, ttl)');
+  console.log('  - deleteDnsRecord(domain, name, type)');
+  console.log('  - replaceDnsRecords(domain, records)');
+  console.log('  - createSnapshot(domain, name)');
+  console.log('  - listSnapshots(domain)');
+  console.log('  - restoreSnapshot(domain, snapshotId)');
   console.log('  - checkAvailability(domains)');
   console.log('  - generateVariations(baseName, config)');
+  console.log('  - isValidIPv4(ip)');
+  console.log('  - isValidIPv6(ip)');
+  console.log('  - isValidHostname(hostname)');
+  console.log('  - isValidTTL(ttl)');
+  console.log('  - validateRecordValue(type, value)');
   console.log('');
   console.log('Configuration:');
   console.log(`  Token: ${TOKEN_FILE}`);
