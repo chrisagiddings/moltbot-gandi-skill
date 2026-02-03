@@ -168,7 +168,7 @@ Authorization: Bearer <token>
 [
   {
     "id": "17672a84-e05e-11e7-b536-00163e6dc886",
-    "name": "chrisagiddings",
+    "name": "example-org",
     "type": "individual",
     ...
   }

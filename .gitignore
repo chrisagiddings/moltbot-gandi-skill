@@ -9,8 +9,12 @@ package-lock.json
 # Credentials (NEVER commit these!)
 *.key
 *.pem
+*.token
 api_key
+api_token
 api_secret
+profiles.json
+tokens/
 
 # OS files
 .DS_Store
