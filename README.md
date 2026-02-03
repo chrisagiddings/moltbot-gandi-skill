@@ -14,6 +14,8 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 
 ✅ **Phase 5 - Email Forwarding Complete** - Manage email forwards with catch-all support and validation.
 
+✅ **Phase 6 - SSL Certificate Management Complete** - Manage Gandi SSL certificates with request, monitoring, and details viewing.
+
 ## Features
 
 ### ✅ Currently Available
@@ -50,7 +52,7 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
   - View DS records for registry submission
   - Extensive warnings and safety guidance
   - Algorithm and key type information
-- **Email Forwarding** ✨ NEW
+- **Email Forwarding**
   - List all email forwards for a domain
   - Create email forwards (alias → destination)
   - Update forward destinations
@@ -58,6 +60,14 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
   - Catch-all forwarding support
   - Multiple destination support
   - Email address validation
+- **SSL Certificate Management** ✨ NEW
+  - List certificates managed by Gandi
+  - View detailed certificate information
+  - Request new certificates (with validation methods)
+  - DNS, email, and HTTP validation support
+  - Certificate status monitoring
+  - Expiration tracking
+  - Auto-renewal status viewing
 - **SSL Certificate Monitoring**
   - Check SSL status for all domains
   - Certificate issuer identification
@@ -71,7 +81,6 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 
 - Multi-organization support ([#1](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/1))
 - Gateway Console configuration ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3))
-- Certificate management ([#10](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/10))
 - Email forwarding configuration ([#11](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/11))
 
 ## Requirements
@@ -478,6 +487,60 @@ node delete-email-forward.js example.com old-alias --confirm
 **⚠️  Catch-All Warning:**
 Catch-all forwards receive ALL unmatched emails including spam.
 Use with caution and consider specific forwards instead.
+
+#### 15. SSL Certificate Management ✨ NEW
+
+```bash
+# List certificates managed by Gandi
+node list-certificates.js
+
+# View certificate details
+node cert-details.js <certificate-id>
+
+# Request new certificate (dry-run)
+node request-certificate.js example.com --dry-run
+
+# Request certificate with DNS validation
+node request-certificate.js example.com --method dns
+
+# Request with email validation
+node request-certificate.js example.com --method email
+
+# Check SSL status of all domains (existing tool)
+node check-ssl.js
+```
+
+**⚠️  IMPORTANT: Gandi SSL certificates may have costs!**
+
+**Certificate Management Features:**
+- List certificates managed through Gandi
+- View detailed certificate information (SANs, dates, status)
+- Request new certificates with validation methods
+- DNS-01, email, and HTTP-01 validation support
+- Certificate status monitoring (valid, pending, expired)
+- Expiration tracking with warnings
+- Auto-renewal status viewing
+
+**Validation Methods:**
+- **DNS (dns-01)**: Add TXT records to DNS (supports wildcards)
+- **Email**: Click validation link sent to admin addresses
+- **HTTP (http-01)**: Place file on web server (port 80)
+
+**Service Notes:**
+- This manages certificates through Gandi's certificate service
+- Gandi SSL certificates may require subscription or purchase
+- Check pricing at: https://www.gandi.net/en-US/domain/ssl
+- Existing `check-ssl.js` monitors ANY certificates (Gandi or external)
+
+**Free Alternatives:**
+- Let's Encrypt with certbot or acme.sh (free, automated)
+- Cloudflare SSL (free with CDN)
+- Your hosting provider may offer free SSL
+
+**Use check-ssl.js for monitoring:**
+The existing `check-ssl.js` script monitors SSL status for ALL your domains,
+regardless of where the certificate came from (Gandi, Let's Encrypt, etc.).
+It provides a quick overview of which domains have SSL and expiration dates.
 
 ### From Moltbot
 

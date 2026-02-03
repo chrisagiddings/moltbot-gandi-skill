@@ -720,6 +720,67 @@ export async function deleteEmailForward(domain, mailbox) {
 }
 
 /**
+ * SSL/TLS certificate management
+ */
+
+/**
+ * List SSL certificates
+ * @returns {Promise<Array>} Array of certificate objects
+ */
+export async function listCertificates() {
+  const result = await gandiApi('/v5/domain/certificates');
+  return result.data;
+}
+
+/**
+ * Get certificate details
+ * @param {string} certId - Certificate UUID
+ * @returns {Promise<Object>} Certificate details
+ */
+export async function getCertificate(certId) {
+  const result = await gandiApi(`/v5/domain/certificates/${certId}`);
+  return result.data;
+}
+
+/**
+ * Request a new SSL certificate
+ * @param {string} cn - Common name (domain)
+ * @param {Object} options - Certificate options (dcv_method, csr, etc.)
+ * @returns {Promise<Object>} Certificate request result
+ */
+export async function requestCertificate(cn, options = {}) {
+  const data = {
+    cn: cn,
+    dcv_method: options.dcv_method || 'dns', // dns, email, or http
+    ...options
+  };
+  
+  const result = await gandiApi('/v5/domain/certificates', 'POST', data);
+  return result.data;
+}
+
+/**
+ * Update certificate
+ * @param {string} certId - Certificate UUID
+ * @param {Object} data - Update data
+ * @returns {Promise<Object>} Updated certificate
+ */
+export async function updateCertificate(certId, data) {
+  const result = await gandiApi(`/v5/domain/certificates/${certId}`, 'PUT', data);
+  return result.data;
+}
+
+/**
+ * Delete/revoke certificate
+ * @param {string} certId - Certificate UUID
+ * @returns {Promise<Object>} Deletion result
+ */
+export async function deleteCertificate(certId) {
+  const result = await gandiApi(`/v5/domain/certificates/${certId}`, 'DELETE');
+  return result;
+}
+
+/**
  * Validation helpers
  */
 
@@ -961,6 +1022,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('  - createEmailForward(domain, mailbox, destinations)');
   console.log('  - updateEmailForward(domain, mailbox, destinations)');
   console.log('  - deleteEmailForward(domain, mailbox)');
+  console.log('  - listCertificates()');
+  console.log('  - getCertificate(certId)');
+  console.log('  - requestCertificate(cn, options)');
+  console.log('  - updateCertificate(certId, data)');
+  console.log('  - deleteCertificate(certId)');
   console.log('  - isValidIPv4(ip)');
   console.log('  - isValidIPv6(ip)');
   console.log('  - isValidHostname(hostname)');
