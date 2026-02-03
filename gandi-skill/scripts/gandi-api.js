@@ -642,6 +642,84 @@ export async function disableDnssec(domain) {
 }
 
 /**
+ * Email forwarding management
+ */
+
+/**
+ * List email forwards for a domain
+ * @param {string} domain - Domain name (FQDN)
+ * @returns {Promise<Array>} Array of email forward objects
+ */
+export async function listEmailForwards(domain) {
+  const result = await gandiApi(`/v5/email/forwards/${domain}`);
+  return result.data;
+}
+
+/**
+ * Get specific email forward
+ * @param {string} domain - Domain name (FQDN)
+ * @param {string} mailbox - Mailbox/alias name (e.g., 'hello', '@' for catch-all)
+ * @returns {Promise<Object>} Email forward details
+ */
+export async function getEmailForward(domain, mailbox) {
+  const result = await gandiApi(`/v5/email/forwards/${domain}/${mailbox}`);
+  return result.data;
+}
+
+/**
+ * Create email forward
+ * @param {string} domain - Domain name (FQDN)
+ * @param {string} mailbox - Mailbox/alias name (e.g., 'hello', '@' for catch-all)
+ * @param {string[]} destinations - Array of destination email addresses
+ * @returns {Promise<Object>} Created forward details
+ */
+export async function createEmailForward(domain, mailbox, destinations) {
+  if (!Array.isArray(destinations)) {
+    destinations = [destinations];
+  }
+  
+  // Mailbox (source) goes in the body for POST
+  const data = {
+    source: mailbox,
+    destinations: destinations
+  };
+  
+  const result = await gandiApi(`/v5/email/forwards/${domain}`, 'POST', data);
+  return result.data;
+}
+
+/**
+ * Update email forward
+ * @param {string} domain - Domain name (FQDN)
+ * @param {string} mailbox - Mailbox/alias name
+ * @param {string[]} destinations - Array of destination email addresses
+ * @returns {Promise<Object>} Updated forward details
+ */
+export async function updateEmailForward(domain, mailbox, destinations) {
+  if (!Array.isArray(destinations)) {
+    destinations = [destinations];
+  }
+  
+  const data = {
+    destinations: destinations
+  };
+  
+  const result = await gandiApi(`/v5/email/forwards/${domain}/${mailbox}`, 'PUT', data);
+  return result.data;
+}
+
+/**
+ * Delete email forward
+ * @param {string} domain - Domain name (FQDN)
+ * @param {string} mailbox - Mailbox/alias name
+ * @returns {Promise<Object>} Deletion result
+ */
+export async function deleteEmailForward(domain, mailbox) {
+  const result = await gandiApi(`/v5/email/forwards/${domain}/${mailbox}`, 'DELETE');
+  return result;
+}
+
+/**
  * Validation helpers
  */
 
@@ -878,6 +956,11 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('  - enableDnssec(domain, options)');
   console.log('  - deleteDnssecKey(domain, keyId)');
   console.log('  - disableDnssec(domain)');
+  console.log('  - listEmailForwards(domain)');
+  console.log('  - getEmailForward(domain, mailbox)');
+  console.log('  - createEmailForward(domain, mailbox, destinations)');
+  console.log('  - updateEmailForward(domain, mailbox, destinations)');
+  console.log('  - deleteEmailForward(domain, mailbox)');
   console.log('  - isValidIPv4(ip)');
   console.log('  - isValidIPv6(ip)');
   console.log('  - isValidHostname(hostname)');

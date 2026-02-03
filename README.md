@@ -12,6 +12,8 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 
 ✅ **Phase 4 - DNSSEC Configuration Complete** - Enable, disable, and manage DNSSEC with extensive warnings and guidance.
 
+✅ **Phase 5 - Email Forwarding Complete** - Manage email forwards with catch-all support and validation.
+
 ## Features
 
 ### ✅ Currently Available
@@ -41,13 +43,21 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
   - **Zone snapshots** (create, list, restore)
   - Automatic snapshots before modifications
   - Input validation for all record types
-- **DNSSEC Management** ✨ NEW
+- **DNSSEC Management**
   - Check DNSSEC status and view keys
   - Enable DNSSEC with automatic key generation
   - Disable DNSSEC with key cleanup
   - View DS records for registry submission
   - Extensive warnings and safety guidance
   - Algorithm and key type information
+- **Email Forwarding** ✨ NEW
+  - List all email forwards for a domain
+  - Create email forwards (alias → destination)
+  - Update forward destinations
+  - Delete email forwards
+  - Catch-all forwarding support
+  - Multiple destination support
+  - Email address validation
 - **SSL Certificate Monitoring**
   - Check SSL status for all domains
   - Certificate issuer identification
@@ -62,7 +72,6 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 - Multi-organization support ([#1](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/1))
 - Gateway Console configuration ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3))
 - Certificate management ([#10](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/10))
-- Email forwarding configuration ([#11](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/11))
 - Email forwarding configuration ([#11](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/11))
 
 ## Requirements
@@ -102,9 +111,11 @@ ln -s $(pwd)/gandi-skill ~/.moltbot/skills/gandi
 3. Select your organization
 4. Choose scopes:
    - ✅ **Domain: read** (required for domain listing)
-   - ✅ **Domain: write** (required for registration & renewal) ✨ NEW
+   - ✅ **Domain: write** (required for registration & renewal)
    - ✅ **LiveDNS: read** (required for DNS viewing)
    - ✅ **LiveDNS: write** (required for DNS modifications)
+   - ✅ **Email: read** (required for viewing email forwards) ✨ NEW
+   - ✅ **Email: write** (required for managing email forwards) ✨ NEW
 5. Copy the token (you won't see it again!)
 
 ### 2. Store Token
@@ -421,6 +432,52 @@ node dnssec-disable.js example.com --confirm
 - Algorithm 8 (RSASHA256)
 - Algorithm 15 (ED25519)
 - Others as supported by Gandi
+
+#### 14. Email Forwarding Management ✨ NEW
+
+```bash
+# List all email forwards
+node list-email-forwards.js example.com
+
+# Create an email forward
+node add-email-forward.js example.com hello hello@gmail.com
+
+# Create forward with multiple destinations
+node add-email-forward.js example.com support support@gmail.com team@company.com
+
+# Set up catch-all (forwards all unmatched emails)
+node add-email-forward.js example.com @ admin@example.com
+
+# Update forward destination
+node update-email-forward.js example.com hello newemail@gmail.com
+
+# Delete email forward
+node delete-email-forward.js example.com old-alias --confirm
+```
+
+**Email Forwarding Features:**
+- List all configured forwards
+- Create forwards (alias → destination)
+- Update forward destinations
+- Delete forwards with confirmation
+- Catch-all support (@ forwards all unmatched)
+- Multiple destinations per forward
+- Email address validation
+
+**Service Requirements:**
+- Email forwarding service must be enabled at Gandi
+- MX records must point to Gandi's email servers
+- SPF records recommended for deliverability
+
+**Common Use Cases:**
+- Personal domain forwarding (hello@ → personal email)
+- Team aliases (support@, sales@, info@)
+- Catch-all for small domains
+- Department routing
+
+**⚠️  Catch-All Warning:**
+Catch-all forwards receive ALL unmatched emails including spam.
+Use with caution and consider specific forwards instead.
 
 ### From Moltbot
 
