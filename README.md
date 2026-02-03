@@ -16,6 +16,8 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 
 ✅ **Phase 6 - SSL Certificate Management Complete** - Manage Gandi SSL certificates with request, monitoring, and details viewing.
 
+✅ **Phase 7 - Multi-Organization Support Complete** - Manage multiple Gandi organizations with profile-based token management.
+
 ## Features
 
 ### ✅ Currently Available
@@ -60,7 +62,7 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
   - Catch-all forwarding support
   - Multiple destination support
   - Email address validation
-- **SSL Certificate Management** ✨ NEW
+- **SSL Certificate Management**
   - List certificates managed by Gandi
   - View detailed certificate information
   - Request new certificates (with validation methods)
@@ -68,6 +70,14 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
   - Certificate status monitoring
   - Expiration tracking
   - Auto-renewal status viewing
+- **Multi-Organization Support** ✨ NEW
+  - Manage multiple Gandi organizations
+  - Profile-based token management
+  - Separate tokens per organization
+  - Default profile configuration
+  - Profile switching for all commands
+  - Automatic legacy token migration
+  - Organization info display
 - **SSL Certificate Monitoring**
   - Check SSL status for all domains
   - Certificate issuer identification
@@ -79,7 +89,6 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 
 ### 🚧 Coming Soon
 
-- Multi-organization support ([#1](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/1))
 - Gateway Console configuration ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3))
 - Email forwarding configuration ([#11](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/11))
 
@@ -541,6 +550,73 @@ node check-ssl.js
 The existing `check-ssl.js` script monitors SSL status for ALL your domains,
 regardless of where the certificate came from (Gandi, Let's Encrypt, etc.).
 It provides a quick overview of which domains have SSL and expiration dates.
+
+#### 16. Multi-Organization Management ✨ NEW
+
+```bash
+# List all profiles
+node manage-profiles.js list
+
+# Add a new profile
+node manage-profiles.js add personal YOUR_TOKEN
+
+# Add profile and set as default
+node manage-profiles.js add work YOUR_TOKEN --set-default
+
+# Set default profile
+node manage-profiles.js default personal
+
+# Show profile details
+node manage-profiles.js show personal
+
+# Remove a profile
+node manage-profiles.js remove old-profile
+
+# Migrate legacy single token
+node manage-profiles.js migrate
+```
+
+**Multi-Organization Features:**
+- Manage multiple Gandi organizations
+- Profile-based token storage (one per org)
+- Default profile configuration
+- Automatic legacy token migration
+- Organization info display
+
+**Profile Storage:**
+```
+~/.config/gandi/
+├── profiles.json           # Profile configuration
+└── tokens/
+    ├── personal.token      # Token for personal org
+    └── work.token          # Token for work org
+```
+
+**Using Profiles with Commands:**
+All scripts support the `--profile` flag:
+```bash
+# Use specific profile
+node list-domains.js --profile work
+
+# Use default profile (no flag needed)
+node list-domains.js
+
+# Create DNS record in specific org
+node add-dns-record.js example.com A www 192.0.2.1 --profile personal
+```
+
+**Legacy Token Migration:**
+If you have an existing `~/.config/gandi/api_token`, run:
+```bash
+node manage-profiles.js migrate
+```
+This creates a "default" profile and backs up your legacy token.
+
+**Common Use Cases:**
+- Personal + work organizations
+- Client account management (agencies)
+- Development/staging/production separation
+- Family/business domain separation
 
 ### From Moltbot
 

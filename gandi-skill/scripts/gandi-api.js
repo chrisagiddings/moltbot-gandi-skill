@@ -171,11 +171,12 @@ export function readDomainCheckerConfig() {
  * @param {string} method - HTTP method (GET, POST, PUT, DELETE, PATCH)
  * @param {object} data - Request body (for POST/PUT/PATCH)
  * @param {object} queryParams - Query string parameters
+ * @param {string} tokenOverride - Optional token override (for profile support)
  * @returns {Promise<object>} Response data
  */
-export function gandiApi(endpoint, method = 'GET', data = null, queryParams = {}) {
+export function gandiApi(endpoint, method = 'GET', data = null, queryParams = {}, tokenOverride = null) {
   return new Promise((resolve, reject) => {
-    const token = readToken();
+    const token = tokenOverride || readToken();
     const apiUrl = readApiUrl();
     
     // Build URL with query parameters
