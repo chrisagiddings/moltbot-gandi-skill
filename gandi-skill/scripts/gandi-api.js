@@ -572,6 +572,76 @@ export async function setAutoRenewal(domain, enabled, duration = 1, orgId = null
 }
 
 /**
+ * DNSSEC management
+ */
+
+/**
+ * Get DNSSEC keys for a domain
+ * @param {string} domain - Domain name (FQDN)
+ * @returns {Promise<Array>} Array of DNSSEC key objects
+ */
+export async function getDnssecKeys(domain) {
+  const result = await gandiApi(`/v5/livedns/domains/${domain}/dnskeys`);
+  return result.data;
+}
+
+/**
+ * Enable DNSSEC for a domain
+ * @param {string} domain - Domain name (FQDN)
+ * @param {Object} options - DNSSEC options (algorithm, flags, etc.)
+ * @returns {Promise<Object>} DNSSEC configuration result
+ */
+export async function enableDnssec(domain, options = {}) {
+  // Gandi auto-generates keys when you enable DNSSEC
+  // The PUT request enables DNSSEC with default or specified settings
+  const data = options.keys || {};
+  
+  const result = await gandiApi(`/v5/livedns/domains/${domain}/dnskeys`, 'PUT', data);
+  return result.data;
+}
+
+/**
+ * Delete a specific DNSSEC key
+ * @param {string} domain - Domain name (FQDN)
+ * @param {string} keyId - Key UUID to delete
+ * @returns {Promise<Object>} Deletion result
+ */
+export async function deleteDnssecKey(domain, keyId) {
+  const result = await gandiApi(`/v5/livedns/domains/${domain}/dnskeys/${keyId}`, 'DELETE');
+  return result;
+}
+
+/**
+ * Disable DNSSEC for a domain (delete all keys)
+ * @param {string} domain - Domain name (FQDN)
+ * @returns {Promise<Object>} Result of disabling DNSSEC
+ */
+export async function disableDnssec(domain) {
+  // Get all keys and delete them
+  const keys = await getDnssecKeys(domain);
+  
+  if (!keys || keys.length === 0) {
+    return { success: true, message: 'DNSSEC already disabled' };
+  }
+  
+  // Delete each key
+  const results = [];
+  for (const key of keys) {
+    try {
+      await deleteDnssecKey(domain, key.uuid || key.id);
+      results.push({ key: key.uuid || key.id, success: true });
+    } catch (error) {
+      results.push({ key: key.uuid || key.id, success: false, error: error.message });
+    }
+  }
+  
+  return {
+    success: results.every(r => r.success),
+    results: results
+  };
+}
+
+/**
  * Validation helpers
  */
 
@@ -804,6 +874,10 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log('  - renewDomain(domain, duration)');
   console.log('  - getAutoRenewal(domain)');
   console.log('  - setAutoRenewal(domain, enabled, duration, orgId)');
+  console.log('  - getDnssecKeys(domain)');
+  console.log('  - enableDnssec(domain, options)');
+  console.log('  - deleteDnssecKey(domain, keyId)');
+  console.log('  - disableDnssec(domain)');
   console.log('  - isValidIPv4(ip)');
   console.log('  - isValidIPv6(ip)');
   console.log('  - isValidHostname(hostname)');

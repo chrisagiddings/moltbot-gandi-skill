@@ -10,6 +10,8 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
 
 ✅ **Phase 3 - Domain Registration & Renewal Complete** - Register new domains and renew existing ones with comprehensive safety features.
 
+✅ **Phase 4 - DNSSEC Configuration Complete** - Enable, disable, and manage DNSSEC with extensive warnings and guidance.
+
 ## Features
 
 ### ✅ Currently Available
@@ -30,7 +32,7 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
   - Smart domain suggestions with name variations
   - TLD alternatives (com, net, org, io, dev, app, ai, tech, etc.)
   - Rate limiting and API citizenship
-- **DNS Operations** ✨ NEW
+- **DNS Operations**
   - List DNS records for any domain
   - View record details by type
   - Check nameserver configuration
@@ -39,6 +41,13 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
   - **Zone snapshots** (create, list, restore)
   - Automatic snapshots before modifications
   - Input validation for all record types
+- **DNSSEC Management** ✨ NEW
+  - Check DNSSEC status and view keys
+  - Enable DNSSEC with automatic key generation
+  - Disable DNSSEC with key cleanup
+  - View DS records for registry submission
+  - Extensive warnings and safety guidance
+  - Algorithm and key type information
 - **SSL Certificate Monitoring**
   - Check SSL status for all domains
   - Certificate issuer identification
@@ -48,12 +57,12 @@ Comprehensive Gandi domain registrar integration for [Moltbot](https://github.co
   - Configurable concurrent request limits
   - Automatic throttling and queuing
 
-### 🚧 Coming Soon (Phase 3+)
+### 🚧 Coming Soon
 
 - Multi-organization support ([#1](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/1))
 - Gateway Console configuration ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3))
-- DNSSEC configuration ([#9](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/9))
 - Certificate management ([#10](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/10))
+- Email forwarding configuration ([#11](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/11))
 - Email forwarding configuration ([#11](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/11))
 
 ## Requirements
@@ -367,6 +376,51 @@ node configure-autorenew.js example.com disable
 - Configure renewal duration (1-10 years)
 - View current settings
 - Prevents accidental domain loss
+
+#### 13. DNSSEC Management ✨ NEW
+
+```bash
+# Check DNSSEC status and view keys
+node dnssec-status.js example.com
+
+# Enable DNSSEC (dry-run)
+node dnssec-enable.js example.com --dry-run
+
+# Enable DNSSEC
+node dnssec-enable.js example.com
+
+# Disable DNSSEC
+node dnssec-disable.js example.com --confirm
+```
+
+**⚠️  WARNING: DNSSEC is complex and can break DNS if misconfigured!**
+
+**DNSSEC Features:**
+- View DNSSEC status and keys (KSK, ZSK)
+- Automatic key generation when enabled
+- DS record display for registry submission
+- Extensive warnings and guidance
+- Key algorithm and flag information
+- Validation instructions
+
+**Important DNSSEC Workflow:**
+1. Lower DNS TTLs to 300-600 seconds
+2. Wait for old TTL to expire
+3. Enable DNSSEC (generates keys automatically)
+4. **Submit DS records to your domain registrar (CRITICAL!)**
+5. Wait 24-48 hours for DS propagation
+6. Verify with DNSSEC validators
+7. Raise TTLs back to normal
+
+**DNSSEC Validators:**
+- https://dnssec-debugger.verisignlabs.com/
+- https://dnsviz.net/
+
+**Key Algorithms Supported:**
+- Algorithm 13 (ECDSAP256SHA256) - Recommended
+- Algorithm 8 (RSASHA256)
+- Algorithm 15 (ED25519)
+- Others as supported by Gandi
 
 ### From Moltbot
 
