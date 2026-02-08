@@ -255,6 +255,47 @@ Type: individual
 UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 ```
 
+### 4. Setup Contact Information (For Domain Registration)
+
+If you plan to register or renew domains, save your contact information once for reuse:
+
+```bash
+cd gandi-skill/scripts
+node setup-contact.js
+```
+
+**The interactive script will prompt for:**
+- First and last name
+- Email address
+- Phone number (auto-formatted to international format: +1.5551234567)
+- Street address
+- City
+- State/Province (US states auto-formatted to ISO 3166-2: OH → US-OH)
+- ZIP/Postal code
+- Country (2-letter code: US, FR, etc.)
+- Account type (individual or company)
+
+**Contact information is saved to:**
+- `~/.config/gandi/contact.json`
+- Permissions: 600 (owner read-write only)
+- Outside the skill directory (never committed to git)
+
+**View or update your saved contact:**
+```bash
+# View current contact
+node view-contact.js
+
+# Update contact (re-run setup)
+node setup-contact.js
+```
+
+**Benefits:**
+- ✅ Setup once, use for all domain registrations
+- ✅ No need to create JSON files manually
+- ✅ Auto-validates and formats phone/state fields
+- ✅ Prevents common API validation errors
+- ✅ Secure storage (600 permissions, outside repo)
+
 ### Sandbox Testing (Optional)
 
 To use Gandi's sandbox environment for testing:
@@ -418,24 +459,31 @@ node manage-snapshots.js example.com restore abc123-uuid --confirm
 # Check availability and pricing (dry-run)
 node register-domain.js example.com --dry-run
 
-# Register a domain
-node register-domain.js example.com --years 2 --contact owner.json
+# Register with saved contact (recommended - run setup-contact.js first)
+node register-domain.js example.com --years 1 --auto-renew
 
-# Register with auto-renewal enabled
-node register-domain.js example.com --years 1 --auto-renew --contact owner.json
+# Register with custom contact file (optional)
+node register-domain.js example.com --years 2 --contact owner.json
 ```
 
 **⚠️  WARNING: Domain registration costs real money and is NON-REFUNDABLE!**
 
 **Features:**
 - Pre-check availability with pricing
+- Uses saved contact by default (from setup-contact.js)
 - Multiple confirmation steps
 - Contact information validation
 - Dry-run mode for testing
 - Shows total cost before charging
 - Optional auto-renewal configuration
+- Auto-formats phone numbers and state codes
 
-**Contact JSON Format:**
+**Using Saved Contact (Recommended):**
+1. Run `node setup-contact.js` once to save your information
+2. All future registrations use this contact automatically
+3. Optional: Override with `--contact custom.json` if needed
+
+**Contact JSON Format (if not using setup-contact.js):**
 ```json
 {
   "given": "John",
