@@ -12,15 +12,18 @@
  *   --years <n>              Registration duration (1-10 years, default: 1)
  *   --contact <file>         JSON file with contact info (optional if setup-contact.js run)
  *   --auto-renew             Enable auto-renewal
+ *   --purge-contact          Delete saved contact after registration (privacy option)
  *   --dry-run                Check availability and show cost without registering
  * 
  * Examples:
  *   node register-domain.js example.com --dry-run
  *   node register-domain.js example.com --years 1 --auto-renew  (uses saved contact)
  *   node register-domain.js example.com --years 2 --contact owner.json  (custom contact)
+ *   node register-domain.js example.com --years 1 --purge-contact  (delete contact after)
  * 
  * Setup:
  *   node setup-contact.js    Save contact info for reuse (run once)
+ *   node delete-contact.js   Delete saved contact manually
  */
 
 import {
@@ -31,7 +34,11 @@ import {
   loadSavedContact
 } from './gandi-api.js';
 import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import readline from 'readline';
+
+const CONTACT_FILE = path.join(os.homedir(), '.config', 'gandi', 'contact.json');
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -43,6 +50,7 @@ if (args.length < 1) {
   console.error('  --years <n>              Registration duration (1-10 years, default: 1)');
   console.error('  --contact <file>         JSON file with contact info (optional if setup-contact.js run)');
   console.error('  --auto-renew             Enable auto-renewal');
+  console.error('  --purge-contact          Delete saved contact after registration (privacy option)');
   console.error('  --dry-run                Check and show cost without registering');
   console.error('');
   console.error('⚠️  WARNING: Domain registration costs real money and is NON-REFUNDABLE!');
@@ -51,9 +59,11 @@ if (args.length < 1) {
   console.error('  node register-domain.js example.com --dry-run');
   console.error('  node register-domain.js example.com --years 1 --auto-renew  (uses saved contact)');
   console.error('  node register-domain.js example.com --years 2 --contact owner.json  (custom)');
+  console.error('  node register-domain.js example.com --years 1 --purge-contact  (delete after)');
   console.error('');
   console.error('Setup (run once):');
   console.error('  node setup-contact.js    Save contact info for reuse');
+  console.error('  node delete-contact.js   Delete saved contact manually');
   console.error('');
   console.error('Contact JSON format (if not using setup-contact.js):');
   console.error('  {');
@@ -76,6 +86,7 @@ let years = 1;
 let contactFile = null;
 let autoRenew = false;
 let dryRun = false;
+let purgeContact = false;
 
 // Parse options
 for (let i = 1; i < args.length; i++) {
@@ -89,6 +100,8 @@ for (let i = 1; i < args.length; i++) {
     autoRenew = true;
   } else if (args[i] === '--dry-run') {
     dryRun = true;
+  } else if (args[i] === '--purge-contact') {
+    purgeContact = true;
   }
 }
 
@@ -294,6 +307,22 @@ async function main() {
         console.warn('   You can enable it later using configure-autorenew.js');
       }
       console.log('');
+    }
+    
+    // Purge contact if requested or preferred
+    const shouldPurge = purgeContact || (contact._purgeAfterUse === true);
+    if (shouldPurge && !contactFile) {
+      // Only purge if using saved contact (not custom contact file)
+      try {
+        if (fs.existsSync(CONTACT_FILE)) {
+          fs.unlinkSync(CONTACT_FILE);
+          console.log('🗑️  Contact information deleted (privacy preference)');
+          console.log('');
+        }
+      } catch (err) {
+        console.warn('⚠️  Could not delete contact file:', err.message);
+        console.log('');
+      }
     }
     
     console.log('🎉 Registration complete!');

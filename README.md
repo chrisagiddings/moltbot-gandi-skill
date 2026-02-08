@@ -289,12 +289,33 @@ node view-contact.js
 node setup-contact.js
 ```
 
+**Privacy Options:**
+
+During setup, you'll be asked how to handle contact info after registration:
+
+1. **RETAIN (recommended):** Keep contact saved for future registrations
+   - Best for frequent domain registrations
+   - Setup once, use forever
+   - Delete manually anytime: `node delete-contact.js`
+
+2. **PURGE:** Auto-delete contact after each successful registration
+   - Best for privacy-conscious users
+   - Contact info only exists during registration
+   - Must re-enter for next registration
+
+**One-time purge override:**
+```bash
+# Delete contact after this registration (even if preference is "retain")
+node register-domain.js example.com --purge-contact
+```
+
 **Benefits:**
 - ✅ Setup once, use for all domain registrations
 - ✅ No need to create JSON files manually
 - ✅ Auto-validates and formats phone/state fields
 - ✅ Prevents common API validation errors
 - ✅ Secure storage (600 permissions, outside repo)
+- ✅ Privacy control (retain or auto-purge)
 
 ### Sandbox Testing (Optional)
 

@@ -94,20 +94,44 @@ node setup-contact.js
 - ZIP/Postal code
 - Country (2-letter code: US, FR, etc.)
 - Type (individual or company)
+- **Privacy preference:** Retain or auto-purge contact after registration
 
 **Contact information is saved to:**
 - `~/.config/gandi/contact.json`
 - Permissions: 600 (owner read-write only)
 - Outside the skill directory (never committed to git)
 
-**View saved contact:**
+**Privacy Options:**
+
+1. **RETAIN (default):** Keep contact saved for future registrations
+   - Best for frequent domain registrations
+   - Setup once, use forever
+   - Delete manually anytime with `delete-contact.js`
+
+2. **PURGE:** Auto-delete contact after each registration
+   - Best for privacy-conscious users
+   - Contact info only exists during registration
+   - Must re-enter for next registration
+
+**Managing saved contact:**
 ```bash
+# View current contact
 node view-contact.js
+
+# Update contact info or privacy preference
+node setup-contact.js
+
+# Delete saved contact manually
+node delete-contact.js
+
+# Delete without confirmation
+node delete-contact.js --force
 ```
 
-**Update contact:**
+**One-time purge override:**
 ```bash
-node setup-contact.js  # Re-run setup to update
+# Register and delete contact (even if preference is "retain")
+node register-domain.js example.com --purge-contact
 ```
 
 ## Usage Examples
@@ -329,6 +353,7 @@ All scripts are in `gandi-skill/scripts/`:
 | `test-auth.js` | Verify authentication works |
 | `setup-contact.js` | Save contact info for domain registration (run once) |
 | `view-contact.js` | View saved contact information |
+| `delete-contact.js` | Delete saved contact (with optional --force) |
 | `list-domains.js` | Show all domains in account |
 | `list-dns.js <domain>` | Show DNS records for domain |
 | `check-domain.js <domain>` | Check single domain availability + pricing |

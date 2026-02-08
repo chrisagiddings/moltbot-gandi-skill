@@ -214,6 +214,24 @@ async function main() {
     process.exit(0);
   }
   
+  console.log('');
+  console.log('🔒 Privacy Preference');
+  console.log('');
+  console.log('How should contact information be handled after domain registration?');
+  console.log('');
+  console.log('   RETAIN (recommended): Keep contact saved for future registrations');
+  console.log('   PURGE: Delete contact automatically after each registration');
+  console.log('');
+  const purgeChoice = await prompt('Auto-purge after registration? (yes/no)', 'no');
+  contact._purgeAfterUse = (purgeChoice.toLowerCase() === 'yes');
+  
+  console.log('');
+  if (contact._purgeAfterUse) {
+    console.log('   ✓ Contact will be deleted after each successful registration');
+  } else {
+    console.log('   ✓ Contact will be retained for reuse (delete manually with delete-contact.js)');
+  }
+  
   // Ensure config directory exists
   if (!fs.existsSync(CONFIG_DIR)) {
     fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
