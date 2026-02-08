@@ -75,6 +75,41 @@ Your organizations:
 🎉 You're ready to use the Gandi skill!
 ```
 
+### Step 4: Setup Contact Information (Optional, for Domain Registration)
+
+If you plan to register domains, save your contact information once for reuse:
+
+```bash
+cd gandi-skill/scripts
+node setup-contact.js
+```
+
+**The script will prompt for:**
+- Name (first and last)
+- Email address
+- Phone number (international format: +1.5551234567)
+- Street address
+- City
+- State/Province (for US: 2-letter code like OH, automatically formatted to US-OH)
+- ZIP/Postal code
+- Country (2-letter code: US, FR, etc.)
+- Type (individual or company)
+
+**Contact information is saved to:**
+- `~/.config/gandi/contact.json`
+- Permissions: 600 (owner read-write only)
+- Outside the skill directory (never committed to git)
+
+**View saved contact:**
+```bash
+node view-contact.js
+```
+
+**Update contact:**
+```bash
+node setup-contact.js  # Re-run setup to update
+```
+
 ## Usage Examples
 
 ### List Your Domains
@@ -292,6 +327,8 @@ All scripts are in `gandi-skill/scripts/`:
 | Script | Purpose |
 |--------|---------|
 | `test-auth.js` | Verify authentication works |
+| `setup-contact.js` | Save contact info for domain registration (run once) |
+| `view-contact.js` | View saved contact information |
 | `list-domains.js` | Show all domains in account |
 | `list-dns.js <domain>` | Show DNS records for domain |
 | `check-domain.js <domain>` | Check single domain availability + pricing |
@@ -303,7 +340,8 @@ All scripts are in `gandi-skill/scripts/`:
 
 ### Default Configuration
 
-- **Token file:** `~/.config/gandi/api_token`
+- **Token file:** `~/.config/gandi/api_token` (API authentication)
+- **Contact file:** `~/.config/gandi/contact.json` (domain registration info, optional)
 - **API URL:** `https://api.gandi.net` (production)
 
 ### Sandbox Testing

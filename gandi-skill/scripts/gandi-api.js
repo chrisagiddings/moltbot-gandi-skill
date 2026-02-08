@@ -13,6 +13,7 @@ import path from 'path';
 const CONFIG_DIR = path.join(process.env.HOME, '.config', 'gandi');
 const TOKEN_FILE = path.join(CONFIG_DIR, 'api_token');
 const URL_FILE = path.join(CONFIG_DIR, 'api_url');
+const CONTACT_FILE = path.join(CONFIG_DIR, 'contact.json');
 const DEFAULT_API_URL = 'https://api.gandi.net';
 
 /**
@@ -53,6 +54,24 @@ export function readApiUrl() {
   }
   
   return DEFAULT_API_URL;
+}
+
+/**
+ * Load saved contact information
+ * @returns {Object|null} Contact object or null if not found
+ */
+export function loadSavedContact() {
+  try {
+    if (!fs.existsSync(CONTACT_FILE)) {
+      return null;
+    }
+    
+    const contact = JSON.parse(fs.readFileSync(CONTACT_FILE, 'utf8'));
+    return contact;
+  } catch (error) {
+    console.error(`⚠️  Error reading saved contact: ${error.message}`);
+    return null;
+  }
 }
 
 /**

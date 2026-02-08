@@ -13,6 +13,7 @@ package-lock.json
 api_key
 api_token
 api_secret
+contact.json
 profiles.json
 tokens/
 

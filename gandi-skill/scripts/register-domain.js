@@ -10,21 +10,25 @@
  * 
  * Options:
  *   --years <n>              Registration duration (1-10 years, default: 1)
- *   --contact <file>         JSON file with contact information
+ *   --contact <file>         JSON file with contact info (optional if setup-contact.js run)
  *   --auto-renew             Enable auto-renewal
  *   --dry-run                Check availability and show cost without registering
  * 
  * Examples:
  *   node register-domain.js example.com --dry-run
- *   node register-domain.js example.com --years 2 --contact owner.json
- *   node register-domain.js example.com --years 1 --auto-renew --contact owner.json
+ *   node register-domain.js example.com --years 1 --auto-renew  (uses saved contact)
+ *   node register-domain.js example.com --years 2 --contact owner.json  (custom contact)
+ * 
+ * Setup:
+ *   node setup-contact.js    Save contact info for reuse (run once)
  */
 
 import {
   checkAvailability,
   registerDomain,
   validateContact,
-  setAutoRenewal
+  setAutoRenewal,
+  loadSavedContact
 } from './gandi-api.js';
 import fs from 'fs';
 import readline from 'readline';
@@ -37,7 +41,7 @@ if (args.length < 1) {
   console.error('');
   console.error('Options:');
   console.error('  --years <n>              Registration duration (1-10 years, default: 1)');
-  console.error('  --contact <file>         JSON file with contact information');
+  console.error('  --contact <file>         JSON file with contact info (optional if setup-contact.js run)');
   console.error('  --auto-renew             Enable auto-renewal');
   console.error('  --dry-run                Check and show cost without registering');
   console.error('');
@@ -45,18 +49,23 @@ if (args.length < 1) {
   console.error('');
   console.error('Examples:');
   console.error('  node register-domain.js example.com --dry-run');
-  console.error('  node register-domain.js example.com --years 2 --contact owner.json');
+  console.error('  node register-domain.js example.com --years 1 --auto-renew  (uses saved contact)');
+  console.error('  node register-domain.js example.com --years 2 --contact owner.json  (custom)');
   console.error('');
-  console.error('Contact JSON format:');
+  console.error('Setup (run once):');
+  console.error('  node setup-contact.js    Save contact info for reuse');
+  console.error('');
+  console.error('Contact JSON format (if not using setup-contact.js):');
   console.error('  {');
   console.error('    "given": "John",');
   console.error('    "family": "Doe",');
   console.error('    "email": "john@example.com",');
   console.error('    "streetaddr": "123 Main St",');
   console.error('    "city": "Paris",');
+  console.error('    "state": "US-CA",');
   console.error('    "zip": "75001",');
-  console.error('    "country": "FR",');
-  console.error('    "phone": "+33.123456789",');
+  console.error('    "country": "US",');
+  console.error('    "phone": "+1.5551234567",');
   console.error('    "type": "individual"');
   console.error('  }');
   process.exit(1);
@@ -173,22 +182,37 @@ async function main() {
     }
     
     // Load and validate contact information
-    if (!contactFile) {
-      console.error('❌ Error: Contact file required for registration');
-      console.error('   Use --contact <file> to provide contact information');
-      console.error('');
-      console.error('   Create a JSON file with your contact details:');
-      console.error('   {"given":"John","family":"Doe","email":"john@example.com",...}');
-      process.exit(1);
-    }
-    
     let contact;
-    try {
-      const contactData = fs.readFileSync(contactFile, 'utf8');
-      contact = JSON.parse(contactData);
-    } catch (err) {
-      console.error(`❌ Error reading contact file: ${err.message}`);
-      process.exit(1);
+    
+    if (contactFile) {
+      // Load from specified file
+      try {
+        const contactData = fs.readFileSync(contactFile, 'utf8');
+        contact = JSON.parse(contactData);
+      } catch (err) {
+        console.error(`❌ Error reading contact file: ${err.message}`);
+        process.exit(1);
+      }
+    } else {
+      // Try to load saved contact
+      contact = loadSavedContact();
+      
+      if (!contact) {
+        console.error('❌ Error: No contact information found');
+        console.error('');
+        console.error('Option 1: Setup default contact (recommended)');
+        console.error('   node setup-contact.js');
+        console.error('');
+        console.error('Option 2: Provide contact file for this registration');
+        console.error(`   node register-domain.js ${domain} --contact owner.json`);
+        console.error('');
+        console.error('Contact JSON format:');
+        console.error('   {"given":"John","family":"Doe","email":"john@example.com",...}');
+        process.exit(1);
+      }
+      
+      console.log('📋 Using saved contact information');
+      console.log('');
     }
     
     // Validate contact
