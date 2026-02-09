@@ -1,232 +1,61 @@
-# Gandi Domain Registrar Skill for Moltbot
+---
+name: gandi
+description: "Manage Gandi domains, DNS, email, and SSL certificates via the Gandi API"
+---
 
-Comprehensive Gandi domain registrar integration for [Moltbot](https://github.com/openclaw/openclaw) (formerly Clawdbot).
+# Gandi Domain Registrar Skill
 
-## Status
+Comprehensive Gandi domain registrar integration for Moltbot.
 
-✅ **Phase 1 MVP Complete** - Basic domain management, DNS operations, and domain availability checking functional.
+**Status:** ✅ Phase 2 Complete - DNS modification & snapshots functional
 
-✅ **Phase 2 - DNS Modification Complete** - Full DNS record management with create, update, delete, and zone snapshots.
+## Current Capabilities
 
-✅ **Phase 3 - Domain Registration & Renewal Complete** - Register new domains and renew existing ones with comprehensive safety features.
+### Phase 1 (Complete)
+- ✅ Personal Access Token authentication
+- ✅ List domains in your account
+- ✅ Get domain details (expiration, status, services)
+- ✅ List DNS records for domains
+- ✅ View domain and DNS information
+- ✅ **Domain availability checking** ([#4](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/4))
+- ✅ **Smart domain suggestions with variations** ([#4](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/4))
+- ✅ SSL certificate status checker
+- ✅ Error handling and validation
 
-✅ **Phase 4 - DNSSEC Configuration Complete** - Enable, disable, and manage DNSSEC with extensive warnings and guidance.
+### Phase 2 (Complete)
+- ✅ **Add/update DNS records** (A, AAAA, CNAME, MX, TXT, NS, SRV, CAA, PTR)
+- ✅ **Delete DNS records**
+- ✅ **Bulk DNS operations** (replace all records at once)
+- ✅ **DNS zone snapshots** (create, list, restore)
+- ✅ **Record validation** (automatic validation for each record type)
+- ✅ **Safety features** (automatic snapshots before bulk changes, confirmation prompts)
 
-✅ **Phase 5 - Email Forwarding Complete** - Manage email forwards with catch-all support and validation.
+## Coming Soon (Phase 3+)
 
-✅ **Phase 6 - SSL Certificate Management Complete** - Manage Gandi SSL certificates with request, monitoring, and details viewing.
-
-✅ **Phase 7 - Multi-Organization Support Complete** - Manage multiple Gandi organizations with profile-based token management.
-
-✅ **Phase 8 - Gateway Console Integration Complete** - Full UI configuration support through Moltbot Gateway Console with schema and helpers.
-
-## Features
-
-### ✅ Currently Available
-
-- **Authentication** - Personal Access Token (PAT) support
-- **Domain Management** ✨ NEW
-  - List all domains in your account
-  - Get detailed domain information
-  - Check domain expiration and auto-renewal status
-  - View domain services (LiveDNS, Email, etc.)
-  - **Register new domains** with availability pre-check and pricing
-  - **Renew existing domains** with cost calculation
-  - **Configure auto-renewal** settings
-  - Multiple confirmation steps for paid operations
-  - Dry-run mode for testing without charges
-- **Domain Availability Checking**
-  - Single domain lookup with pricing
-  - Smart domain suggestions with name variations
-  - TLD alternatives (com, net, org, io, dev, app, ai, tech, etc.)
-  - Rate limiting and API citizenship
-- **DNS Operations**
-  - List DNS records for any domain
-  - View record details by type
-  - Check nameserver configuration
-  - **Create/update DNS records** (A, AAAA, CNAME, MX, TXT, NS, SRV, CAA)
-  - **Delete DNS records** with safety confirmations
-  - **Zone snapshots** (create, list, restore)
-  - Automatic snapshots before modifications
-  - Input validation for all record types
-- **DNSSEC Management**
-  - Check DNSSEC status and view keys
-  - Enable DNSSEC with automatic key generation
-  - Disable DNSSEC with key cleanup
-  - View DS records for registry submission
-  - Extensive warnings and safety guidance
-  - Algorithm and key type information
-- **Email Forwarding**
-  - List all email forwards for a domain
-  - Create email forwards (alias → destination)
-  - Update forward destinations
-  - Delete email forwards
-  - Catch-all forwarding support
-  - Multiple destination support
-  - Email address validation
-- **SSL Certificate Management**
-  - List certificates managed by Gandi
-  - View detailed certificate information
-  - Request new certificates (with validation methods)
-  - DNS, email, and HTTP validation support
-  - Certificate status monitoring
-  - Expiration tracking
-  - Auto-renewal status viewing
-- **Multi-Organization Support** ✨ NEW
-  - Manage multiple Gandi organizations
-  - Profile-based token management
-  - Separate tokens per organization
-  - Default profile configuration
-  - Profile switching for all commands
-  - Automatic legacy token migration
-  - Organization info display
-- **SSL Certificate Monitoring**
-  - Check SSL status for all domains
-  - Certificate issuer identification
-  - Expiration warnings
-- **API Citizenship**
-  - Built-in rate limiting (100 req/min, 10% of Gandi's limit)
-  - Configurable concurrent request limits
-  - Automatic throttling and queuing
-
-### 🚧 Coming Soon
-
-None - all planned features complete!
-
-## Requirements
-
-- **Moltbot/Clawdbot** v2026.1+
-- **Gandi Personal Access Token** - Create at [Gandi Admin](https://admin.gandi.net/organizations/account/pat)
-- Valid Gandi account with domains (or use sandbox for testing)
-
-## Installation
-
-### Via ClawdHub (Coming Soon)
-
-```bash
-moltbot skills install gandi
-```
-
-### Manual Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/chrisagiddings/moltbot-gandi-skill.git
-cd moltbot-gandi-skill
-
-# Copy skill to Moltbot skills directory
-cp -r gandi-skill ~/.moltbot/skills/
-
-# Or symlink for development
-ln -s $(pwd)/gandi-skill ~/.moltbot/skills/gandi
-```
-
-## Configuration
-
-### Gateway Console (Recommended) ✨ NEW
-
-The easiest way to configure the Gandi skill is through the Moltbot Gateway Console UI.
-
-**Configuration Path:** Skills → gandi → Config
-
-#### Single Organization (Simple)
-
-```yaml
-skills:
-  entries:
-    gandi:
-      enabled: true
-      config:
-        apiToken: "${GANDI_API_TOKEN}"  # Environment variable reference
-```
-
-#### Multiple Organizations
-
-```yaml
-skills:
-  entries:
-    gandi:
-      enabled: true
-      config:
-        organizations:
-          - name: "personal"
-            label: "Personal Domains"
-            apiToken: "${GANDI_TOKEN_PERSONAL}"
-            sharingId: "17672a84-e05e-11e7-b536-00163e6dc886"
-            default: true
-          - name: "work"
-            label: "Work Organization"
-            apiToken: "${GANDI_TOKEN_WORK}"
-            sharingId: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
-```
-
-#### Domain Checker Configuration
-
-```yaml
-skills:
-  entries:
-    gandi:
-      enabled: true
-      config:
-        apiToken: "${GANDI_API_TOKEN}"
-        domainChecker:
-          tlds:
-            mode: "extend"  # or "replace"
-            custom: ["co.uk", "eu", "de"]
-          limits:
-            maxTlds: 5
-            maxVariations: 10
-          rateLimit:
-            maxRequestsPerMinute: 100
-```
-
-**Benefits:**
-- ✅ Centralized configuration management
-- ✅ Environment variable support (`${VAR_NAME}`)
-- ✅ Multi-organization support built-in
-- ✅ UI-based editing (no manual JSON editing)
-- ✅ Automatic validation
-- ✅ Secure token storage
-
-**Configuration Schema:** See `gandi-skill/config.schema.json` for complete schema
-
-**Check Configuration Status:**
-```bash
-node config-status.js
-```
+- Domain registration
+- Multi-organization support ([#1](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/1))
+- Gateway Console configuration ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3))
+- Domain renewal management
+- DNSSEC configuration
+- Certificate management
+- Email forwarding configuration
 
 ## Setup
 
-### Option 1: Gateway Console (Recommended)
-
-1. Open Moltbot Gateway Console
-2. Navigate to Skills → gandi → Config
-3. Enable the skill
-4. Add your API token (see below for how to get one)
-5. Optionally configure domain checker preferences
-6. Save configuration
-
-### Option 2: Profile-Based (Multi-Organization)
-
-See [Multi-Organization Management](#16-multi-organization-management-%EF%B8%8F-new) section below.
-
-### Option 3: Legacy File-Based
-
-### 1. Create Personal Access Token
+### Step 1: Create Personal Access Token
 
 1. Go to [Gandi Admin → Personal Access Tokens](https://admin.gandi.net/organizations/account/pat)
 2. Click **"Create a token"**
 3. Select your organization
 4. Choose scopes:
-   - ✅ **Domain: read** (required for domain listing)
-   - ✅ **Domain: write** (required for registration & renewal)
-   - ✅ **LiveDNS: read** (required for DNS viewing)
-   - ✅ **LiveDNS: write** (required for DNS modifications)
-   - ✅ **Email: read** (required for viewing email forwards) ✨ NEW
-   - ✅ **Email: write** (required for managing email forwards) ✨ NEW
+   - ✅ Domain: read (required for listing domains)
+   - ✅ LiveDNS: read (required for viewing DNS records)
+   - ✅ LiveDNS: write (**required for Phase 2 - DNS modification**)
 5. Copy the token (you won't see it again!)
 
-### 2. Store Token
+**Note:** If you only need read-only access (Phase 1), you can skip the LiveDNS write permission.
+
+### Step 2: Store Token
 
 ```bash
 # Create config directory
@@ -239,152 +68,169 @@ echo "YOUR_PERSONAL_ACCESS_TOKEN" > ~/.config/gandi/api_token
 chmod 600 ~/.config/gandi/api_token
 ```
 
-### 3. Test Authentication
+### Step 3: Test Authentication
 
 ```bash
 cd gandi-skill/scripts
 node test-auth.js
 ```
 
-**Expected output:**
+Expected output:
 ```
 ✅ Authentication successful!
 
-Organization: yourname
-Type: individual
-UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+Your organizations:
+  1. Personal Account (uuid-here)
+     Type: individual
+
+🎉 You're ready to use the Gandi skill!
 ```
 
-### 4. Setup Contact Information (For Domain Registration)
+### Step 4: Setup Contact Information (Optional, for Domain Registration)
 
-If you plan to register or renew domains, save your contact information once for reuse:
+If you plan to register domains, save your contact information once for reuse:
 
 ```bash
 cd gandi-skill/scripts
 node setup-contact.js
 ```
 
-**The interactive script will prompt for:**
-- First and last name
+**The script will prompt for:**
+- Name (first and last)
 - Email address
-- Phone number (auto-formatted to international format: +1.5551234567)
+- Phone number (international format: +1.5551234567)
 - Street address
 - City
-- State/Province (US states auto-formatted to ISO 3166-2: OH → US-OH)
+- State/Province (for US: 2-letter code like OH, automatically formatted to US-OH)
 - ZIP/Postal code
 - Country (2-letter code: US, FR, etc.)
-- Account type (individual or company)
+- Type (individual or company)
+- **Privacy preference:** Retain or auto-purge contact after registration
 
 **Contact information is saved to:**
 - `~/.config/gandi/contact.json`
 - Permissions: 600 (owner read-write only)
 - Outside the skill directory (never committed to git)
 
-**View or update your saved contact:**
-```bash
-# View current contact
-node view-contact.js
-
-# Update contact (re-run setup)
-node setup-contact.js
-```
-
 **Privacy Options:**
 
-During setup, you'll be asked how to handle contact info after registration:
-
-1. **RETAIN (recommended):** Keep contact saved for future registrations
+1. **RETAIN (default):** Keep contact saved for future registrations
    - Best for frequent domain registrations
    - Setup once, use forever
-   - Delete manually anytime: `node delete-contact.js`
+   - Delete manually anytime with `delete-contact.js`
 
-2. **PURGE:** Auto-delete contact after each successful registration
+2. **PURGE:** Auto-delete contact after each registration
    - Best for privacy-conscious users
    - Contact info only exists during registration
    - Must re-enter for next registration
 
+**Managing saved contact:**
+```bash
+# View current contact
+node view-contact.js
+
+# Update contact info or privacy preference
+node setup-contact.js
+
+# Delete saved contact manually
+node delete-contact.js
+
+# Delete without confirmation
+node delete-contact.js --force
+```
+
 **One-time purge override:**
 ```bash
-# Delete contact after this registration (even if preference is "retain")
+# Register and delete contact (even if preference is "retain")
 node register-domain.js example.com --purge-contact
 ```
 
-**Benefits:**
-- ✅ Setup once, use for all domain registrations
-- ✅ No need to create JSON files manually
-- ✅ Auto-validates and formats phone/state fields
-- ✅ Prevents common API validation errors
-- ✅ Secure storage (600 permissions, outside repo)
-- ✅ Privacy control (retain or auto-purge)
+## Usage Examples
 
-### Sandbox Testing (Optional)
-
-To use Gandi's sandbox environment for testing:
-
-```bash
-# Create sandbox token at: https://admin.sandbox.gandi.net
-echo "YOUR_SANDBOX_TOKEN" > ~/.config/gandi/api_token
-echo "https://api.sandbox.gandi.net" > ~/.config/gandi/api_url
-```
-
-## Usage
-
-### Command-Line Scripts
-
-All scripts are located in `gandi-skill/scripts/`:
-
-#### 1. List Your Domains
+### List Your Domains
 
 ```bash
 node list-domains.js
 ```
 
-Shows domain names, expiration dates, auto-renewal status, services, and organization ownership.
+Output shows:
+- Domain names
+- Expiration dates
+- Auto-renewal status
+- Services (LiveDNS, Email, etc.)
+- Organization ownership
 
-#### 2. View DNS Records
+### List DNS Records
 
 ```bash
 node list-dns.js example.com
 ```
 
-Displays all DNS records grouped by type (A, CNAME, MX, TXT, etc.) with TTL values and nameservers.
+Output shows:
+- All DNS records grouped by type
+- TTL values
+- Record names and values
+- Nameservers
 
-#### 3. Check Domain Availability
+### Using from Moltbot
+
+Once configured, you can use natural language:
+
+> "List my Gandi domains"
+
+> "Show DNS records for example.com"
+
+> "When does example.com expire?"
+
+> "Is auto-renewal enabled for example.com?"
+
+## Domain Availability Checking
+
+### Check Single Domain
+
+Check if a specific domain is available for registration:
 
 ```bash
 node check-domain.js example.com
 ```
 
 **Features:**
-- Availability status
-- Pricing information (registration, renewal, transfer)
-- Supported features (DNSSEC, LiveDNS)
-- Discount pricing when available
+- Shows availability status (available/unavailable/pending/error)
+- Displays pricing information (registration, renewal, transfer)
+- Lists supported features (DNSSEC, LiveDNS, etc.)
+- Shows TLD information
 
-**Example output:**
+**Example Output:**
 ```
-🔍 Checking availability for: yattadone.app
+🔍 Checking availability for: example.com
 
-Domain: yattadone.app
+Domain: example.com
 
 ✅ Status: AVAILABLE
 
 💰 Pricing:
-  1 year: $14.99 USD (normally $23.29)
-  2-10 years: $23.29 USD
+  1 year: 12.00 EUR (+ 2.40 tax)
+  2 years: 24.00 EUR (+ 4.80 tax)
 
 📋 Supported Features:
   • create
+  • dnssec
+  • livedns
+
+🌐 TLD Information:
+  Extension: com
 ```
 
-#### 4. Smart Domain Suggestions
+### Smart Domain Suggestions
+
+Find available alternatives with TLD variations and name modifications:
 
 ```bash
 # Check all configured TLDs + variations
 node suggest-domains.js example
 
 # Check specific TLDs only
-node suggest-domains.js example --tlds com,net,io,app
+node suggest-domains.js example --tlds com,net,io
 
 # Skip name variations (only check TLDs)
 node suggest-domains.js example --no-variations
@@ -394,412 +240,66 @@ node suggest-domains.js example --json
 ```
 
 **Name Variation Patterns:**
-- **Hyphenated**: `example` → `ex-ample`
-- **Abbreviated**: `example` → `exmpl`
-- **Prefix**: `example` → `get-example`, `my-example`, `the-example`, `try-example`
-- **Suffix**: `example` → `example-app`, `example-hub`, `exampleio`, `examplely`
-- **Numbers**: `example` → `example2`, `example3`
+1. **Hyphenated**: Adds hyphens between word boundaries (`example` → `ex-ample`)
+2. **Abbreviated**: Removes vowels (`example` → `exmpl`)
+3. **Prefix**: Adds common prefixes (`example` → `get-example`, `my-example`)
+4. **Suffix**: Adds common suffixes (`example` → `example-app`, `example-hub`)
+5. **Numbers**: Appends numbers (`example` → `example2`, `example3`)
 
-**Limits (configurable):**
-- Max 5 TLDs checked (reduces API load)
-- Max 10 name variations
-- Rate limited to 100 requests/min
+**Example Output:**
+```
+🔍 Checking availability for: example
 
-#### 5. Check SSL Certificates
+📊 Checking 13 TLDs and generating variations...
 
-```bash
-node check-ssl.js
+═══════════════════════════════════════════════════════
+📋 EXACT MATCHES (Different TLDs)
+═══════════════════════════════════════════════════════
+
+✅ Available:
+
+  example.net                    12.00 EUR
+  example.io                     39.00 EUR
+  example.dev                    15.00 EUR
+
+❌ Unavailable:
+
+  example.com                    (unavailable)
+  example.org                    (unavailable)
+
+═══════════════════════════════════════════════════════
+🎨 NAME VARIATIONS
+═══════════════════════════════════════════════════════
+
+Hyphenated:
+
+  ✅ ex-ample.com                12.00 EUR
+
+Prefix:
+
+  ✅ get-example.com             12.00 EUR
+  ✅ my-example.com              12.00 EUR
+
+Suffix:
+
+  ✅ example-app.com             12.00 EUR
+  ✅ example-io.com              12.00 EUR
+
+═══════════════════════════════════════════════════════
+📊 SUMMARY: 8 available domains found
+═══════════════════════════════════════════════════════
 ```
 
-Scans all domains for SSL certificate status, shows issuers, expiration dates, and warnings for missing certificates.
+### Configuration
 
-#### 6. Add/Update DNS Records ✨ NEW
+Domain checker configuration is stored in `gandi-skill/config/domain-checker-defaults.json`.
 
-```bash
-node add-dns-record.js example.com A www 192.0.2.1
-node add-dns-record.js example.com CNAME blog example.com. 3600
-node add-dns-record.js example.com MX @ "10 mail.example.com."
-node add-dns-record.js example.com TXT @ "v=spf1 include:_spf.google.com ~all"
-```
-
-**Features:**
-- Creates new records or updates existing ones
-- Automatic snapshot before modifications
-- Input validation for all record types
-- Shows current record before updating
-- Supports custom TTL values
-
-**Supported Record Types:**
-A, AAAA, CNAME, MX, TXT, NS, SRV, CAA, PTR
-
-#### 7. Update DNS Records ✨ NEW
-
-```bash
-node update-dns-record.js example.com A www 192.0.2.10
-node update-dns-record.js example.com TXT @ "v=spf1 ..."
-```
-
-Convenience wrapper around add-dns-record.js with update-focused messaging.
-
-#### 8. Delete DNS Records ✨ NEW
-
-```bash
-node delete-dns-record.js example.com A temp --confirm
-node delete-dns-record.js example.com CNAME staging --confirm
-```
-
-**Safety Features:**
-- Shows current record before deletion
-- Requires confirmation (or --confirm flag)
-- Extra warnings for critical records (@, www, mail, NS, MX)
-- Automatic snapshot before deletion
-- Cannot be undone (except via snapshot restore)
-
-#### 9. Manage Zone Snapshots ✨ NEW
-
-```bash
-# List all snapshots
-node manage-snapshots.js example.com list
-
-# Create a snapshot
-node manage-snapshots.js example.com create "Before DNS migration"
-
-# Restore from snapshot
-node manage-snapshots.js example.com restore abc123-uuid --confirm
-```
-
-**Snapshot Features:**
-- Manual and automatic snapshots
-- Restore entire zone configuration
-- View snapshot creation dates
-- Distinguish automatic vs manual snapshots
-
-#### 10. Register New Domains ✨ NEW
-
-```bash
-# Check availability and pricing (dry-run)
-node register-domain.js example.com --dry-run
-
-# Register with saved contact (recommended - run setup-contact.js first)
-node register-domain.js example.com --years 1 --auto-renew
-
-# Register with custom contact file (optional)
-node register-domain.js example.com --years 2 --contact owner.json
-```
-
-**⚠️  WARNING: Domain registration costs real money and is NON-REFUNDABLE!**
-
-**Features:**
-- Pre-check availability with pricing
-- Uses saved contact by default (from setup-contact.js)
-- Multiple confirmation steps
-- Contact information validation
-- Dry-run mode for testing
-- Shows total cost before charging
-- Optional auto-renewal configuration
-- Auto-formats phone numbers and state codes
-
-**Using Saved Contact (Recommended):**
-1. Run `node setup-contact.js` once to save your information
-2. All future registrations use this contact automatically
-3. Optional: Override with `--contact custom.json` if needed
-
-**Contact JSON Format (if not using setup-contact.js):**
-```json
-{
-  "given": "John",
-  "family": "Doe",
-  "email": "john@example.com",
-  "streetaddr": "123 Main St",
-  "city": "Paris",
-  "zip": "75001",
-  "country": "FR",
-  "phone": "+33.123456789",
-  "type": "individual"
-}
-```
-
-**Contact Types:** `individual`, `company`, `association`, `publicbody`
-
-#### 11. Renew Existing Domains ✨ NEW
-
-```bash
-# Check renewal pricing (dry-run)
-node renew-domain.js example.com --dry-run
-
-# Renew a domain
-node renew-domain.js example.com --years 1
-
-# Renew for multiple years
-node renew-domain.js example.com --years 3
-```
-
-**⚠️  WARNING: Domain renewal costs real money and is NON-REFUNDABLE!**
-
-**Features:**
-- Shows current expiration and days remaining
-- Calculates new expiration date
-- Multiple confirmation steps
-- Dry-run mode for pricing check
-- Shows auto-renewal status
-
-#### 12. Configure Auto-Renewal ✨ NEW
-
-```bash
-# Check current auto-renewal status
-node configure-autorenew.js example.com status
-
-# Enable auto-renewal
-node configure-autorenew.js example.com enable
-
-# Enable with custom duration
-node configure-autorenew.js example.com enable --years 2
-
-# Disable auto-renewal
-node configure-autorenew.js example.com disable
-```
-
-**Auto-Renewal Features:**
-- Enable/disable automatic renewal
-- Configure renewal duration (1-10 years)
-- View current settings
-- Prevents accidental domain loss
-
-#### 13. DNSSEC Management ✨ NEW
-
-```bash
-# Check DNSSEC status and view keys
-node dnssec-status.js example.com
-
-# Enable DNSSEC (dry-run)
-node dnssec-enable.js example.com --dry-run
-
-# Enable DNSSEC
-node dnssec-enable.js example.com
-
-# Disable DNSSEC
-node dnssec-disable.js example.com --confirm
-```
-
-**⚠️  WARNING: DNSSEC is complex and can break DNS if misconfigured!**
-
-**DNSSEC Features:**
-- View DNSSEC status and keys (KSK, ZSK)
-- Automatic key generation when enabled
-- DS record display for registry submission
-- Extensive warnings and guidance
-- Key algorithm and flag information
-- Validation instructions
-
-**Important DNSSEC Workflow:**
-1. Lower DNS TTLs to 300-600 seconds
-2. Wait for old TTL to expire
-3. Enable DNSSEC (generates keys automatically)
-4. **Submit DS records to your domain registrar (CRITICAL!)**
-5. Wait 24-48 hours for DS propagation
-6. Verify with DNSSEC validators
-7. Raise TTLs back to normal
-
-**DNSSEC Validators:**
-- https://dnssec-debugger.verisignlabs.com/
-- https://dnsviz.net/
-
-**Key Algorithms Supported:**
-- Algorithm 13 (ECDSAP256SHA256) - Recommended
-- Algorithm 8 (RSASHA256)
-- Algorithm 15 (ED25519)
-- Others as supported by Gandi
-
-#### 14. Email Forwarding Management ✨ NEW
-
-```bash
-# List all email forwards
-node list-email-forwards.js example.com
-
-# Create an email forward
-node add-email-forward.js example.com hello hello@gmail.com
-
-# Create forward with multiple destinations
-node add-email-forward.js example.com support support@gmail.com team@company.com
-
-# Set up catch-all (forwards all unmatched emails)
-node add-email-forward.js example.com @ admin@example.com
-
-# Update forward destination
-node update-email-forward.js example.com hello newemail@gmail.com
-
-# Delete email forward
-node delete-email-forward.js example.com old-alias --confirm
-```
-
-**Email Forwarding Features:**
-- List all configured forwards
-- Create forwards (alias → destination)
-- Update forward destinations
-- Delete forwards with confirmation
-- Catch-all support (@ forwards all unmatched)
-- Multiple destinations per forward
-- Email address validation
-
-**Service Requirements:**
-- Email forwarding service must be enabled at Gandi
-- MX records must point to Gandi's email servers
-- SPF records recommended for deliverability
-
-**Common Use Cases:**
-- Personal domain forwarding (hello@ → personal email)
-- Team aliases (support@, sales@, info@)
-- Catch-all for small domains
-- Department routing
-
-**⚠️  Catch-All Warning:**
-Catch-all forwards receive ALL unmatched emails including spam.
-Use with caution and consider specific forwards instead.
-
-#### 15. SSL Certificate Management ✨ NEW
-
-```bash
-# List certificates managed by Gandi
-node list-certificates.js
-
-# View certificate details
-node cert-details.js <certificate-id>
-
-# Request new certificate (dry-run)
-node request-certificate.js example.com --dry-run
-
-# Request certificate with DNS validation
-node request-certificate.js example.com --method dns
-
-# Request with email validation
-node request-certificate.js example.com --method email
-
-# Check SSL status of all domains (existing tool)
-node check-ssl.js
-```
-
-**⚠️  IMPORTANT: Gandi SSL certificates may have costs!**
-
-**Certificate Management Features:**
-- List certificates managed through Gandi
-- View detailed certificate information (SANs, dates, status)
-- Request new certificates with validation methods
-- DNS-01, email, and HTTP-01 validation support
-- Certificate status monitoring (valid, pending, expired)
-- Expiration tracking with warnings
-- Auto-renewal status viewing
-
-**Validation Methods:**
-- **DNS (dns-01)**: Add TXT records to DNS (supports wildcards)
-- **Email**: Click validation link sent to admin addresses
-- **HTTP (http-01)**: Place file on web server (port 80)
-
-**Service Notes:**
-- This manages certificates through Gandi's certificate service
-- Gandi SSL certificates may require subscription or purchase
-- Check pricing at: https://www.gandi.net/en-US/domain/ssl
-- Existing `check-ssl.js` monitors ANY certificates (Gandi or external)
-
-**Free Alternatives:**
-- Let's Encrypt with certbot or acme.sh (free, automated)
-- Cloudflare SSL (free with CDN)
-- Your hosting provider may offer free SSL
-
-**Use check-ssl.js for monitoring:**
-The existing `check-ssl.js` script monitors SSL status for ALL your domains,
-regardless of where the certificate came from (Gandi, Let's Encrypt, etc.).
-It provides a quick overview of which domains have SSL and expiration dates.
-
-#### 16. Multi-Organization Management ✨ NEW
-
-```bash
-# List all profiles
-node manage-profiles.js list
-
-# Add a new profile
-node manage-profiles.js add personal YOUR_TOKEN
-
-# Add profile and set as default
-node manage-profiles.js add work YOUR_TOKEN --set-default
-
-# Set default profile
-node manage-profiles.js default personal
-
-# Show profile details
-node manage-profiles.js show personal
-
-# Remove a profile
-node manage-profiles.js remove old-profile
-
-# Migrate legacy single token
-node manage-profiles.js migrate
-```
-
-**Multi-Organization Features:**
-- Manage multiple Gandi organizations
-- Profile-based token storage (one per org)
-- Default profile configuration
-- Automatic legacy token migration
-- Organization info display
-
-**Profile Storage:**
-```
-~/.config/gandi/
-├── profiles.json           # Profile configuration
-└── tokens/
-    ├── personal.token      # Token for personal org
-    └── work.token          # Token for work org
-```
-
-**Using Profiles with Commands:**
-All scripts support the `--profile` flag:
-```bash
-# Use specific profile
-node list-domains.js --profile work
-
-# Use default profile (no flag needed)
-node list-domains.js
-
-# Create DNS record in specific org
-node add-dns-record.js example.com A www 192.0.2.1 --profile personal
-```
-
-**Legacy Token Migration:**
-If you have an existing `~/.config/gandi/api_token`, run:
-```bash
-node manage-profiles.js migrate
-```
-This creates a "default" profile and backs up your legacy token.
-
-**Common Use Cases:**
-- Personal + work organizations
-- Client account management (agencies)
-- Development/staging/production separation
-- Family/business domain separation
-
-### From Moltbot
-
-Once configured, you can use natural language:
-
-> "List my Gandi domains"
-
-> "Show DNS records for example.com"
-
-> "Check if yattadone.app is available"
-
-> "When does example.com expire?"
-
-## Configuration
-
-### Default Configuration
-
-Configuration is stored in `gandi-skill/config/domain-checker-defaults.json`:
-
+**Structure:**
 ```json
 {
   "tlds": {
     "mode": "extend",
-    "defaults": ["com", "net", "org", "info", "io", "dev", "app", "ai", "tech", "co", "biz", "me", "us"],
+    "defaults": ["com", "net", "org", "info", "io", "dev", "app", "ai", "tech"],
     "custom": []
   },
   "variations": {
@@ -821,75 +321,244 @@ Configuration is stored in `gandi-skill/config/domain-checker-defaults.json`:
 }
 ```
 
+**Rate Limiting & Limits:**
+- **maxConcurrent**: Maximum concurrent API requests (default: 3)
+- **delayMs**: Delay between requests in milliseconds (default: 200ms)
+- **maxRequestsPerMinute**: Hard limit on requests per minute (default: 100, Gandi allows 1000)
+- **maxTlds**: Maximum TLDs to check in suggest-domains.js (default: 5)
+- **maxVariations**: Maximum name variations to generate (default: 10)
+
+These limits ensure good API citizenship and prevent overwhelming Gandi's API.
+
 **TLD Modes:**
-- `"extend"` - Use defaults + custom TLDs (merged list)
-- `"replace"` - Use only custom TLDs (ignore defaults)
+- `"extend"`: Use defaults + custom TLDs (merged list)
+- `"replace"`: Use only custom TLDs (ignore defaults)
 
-**Rate Limiting:**
-- `maxConcurrent` - Max concurrent API requests (default: 3)
-- `delayMs` - Minimum delay between requests (default: 200ms)
-- `maxRequestsPerMinute` - Hard cap (default: 100, Gandi allows 1000)
+**Gateway Console Integration:**
 
-**Result Caps:**
-- `maxTlds` - Max TLDs to check in suggestions (default: 5)
-- `maxVariations` - Max name variations to generate (default: 10)
-
-### Gateway Console Integration (Coming Soon)
-
-Future configuration via Gateway Console ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3)):
+When Gateway Console support is added ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3)), configuration will be available at:
 
 ```yaml
 skills:
   entries:
     gandi:
-      enabled: true
       config:
-        apiToken: "${GANDI_API_TOKEN}"
         domainChecker:
           tlds:
             mode: extend
-            custom: ["co.uk", "co.ua"]
-          limits:
-            maxTlds: 5
-            maxVariations: 10
+            defaults: [...]
+            custom: [...]
+          variations:
+            enabled: true
+            patterns: [...]
 ```
 
-See `docs/gateway-config-design.md` for complete architecture.
+See `docs/gateway-config-design.md` for complete configuration architecture.
 
-## API Reference
+## DNS Management (Phase 2)
 
-### Core Functions (gandi-api.js)
+### Add or Update DNS Records
 
-Import and use in your own scripts:
+Create or update individual DNS records:
 
-```javascript
-import { 
-  testAuth,
-  listDomains,
-  getDomain,
-  listDnsRecords,
-  getDnsRecord,
-  checkAvailability,
-  generateVariations,
-  readDomainCheckerConfig,
-  getRateLimiter
-} from './gandi-api.js';
+```bash
+# Add an A record for root domain
+node add-dns-record.js example.com @ A 192.168.1.1
 
-// Check domain availability
-const results = await checkAvailability(['example.com', 'example.net']);
+# Add www subdomain pointing to root
+node add-dns-record.js example.com www CNAME @
 
-// Generate name variations
-const variations = generateVariations('example', {
-  patterns: ['hyphenated', 'prefix', 'suffix'],
-  prefixes: ['get', 'my'],
-  suffixes: ['app', 'io']
-});
+# Add MX record for email
+node add-dns-record.js example.com @ MX "10 mail.example.com."
 
-// Use rate limiter
-const limiter = getRateLimiter();
-const result = await limiter.throttle(async () => {
-  return await checkAvailability(['example.com']);
-});
+# Add TXT record for SPF
+node add-dns-record.js example.com @ TXT "v=spf1 include:_spf.google.com ~all"
+
+# Add with custom TTL (5 minutes)
+node add-dns-record.js example.com api A 192.168.1.10 300
+```
+
+**Supported record types:** A, AAAA, CNAME, MX, TXT, NS, SRV, CAA, PTR
+
+### Delete DNS Records
+
+Remove specific DNS records:
+
+```bash
+# Delete old A record
+node delete-dns-record.js example.com old A
+
+# Delete with confirmation prompt
+node delete-dns-record.js example.com test CNAME
+
+# Delete without confirmation
+node delete-dns-record.js example.com old A --force
+```
+
+### Bulk DNS Operations
+
+Replace all DNS records at once:
+
+```bash
+# From JSON file
+node update-dns-bulk.js example.com new-records.json
+
+# From stdin
+cat records.json | node update-dns-bulk.js example.com
+
+# Skip automatic snapshot
+node update-dns-bulk.js example.com records.json --no-snapshot
+
+# Skip confirmation
+node update-dns-bulk.js example.com records.json --force
+```
+
+**JSON format:**
+```json
+[
+  {
+    "rrset_name": "@",
+    "rrset_type": "A",
+    "rrset_ttl": 10800,
+    "rrset_values": ["192.168.1.1"]
+  },
+  {
+    "rrset_name": "www",
+    "rrset_type": "CNAME",
+    "rrset_ttl": 10800,
+    "rrset_values": ["@"]
+  },
+  {
+    "rrset_name": "@",
+    "rrset_type": "MX",
+    "rrset_ttl": 10800,
+    "rrset_values": ["10 mail.example.com.", "20 mail2.example.com."]
+  }
+]
+```
+
+### DNS Zone Snapshots
+
+Create safety backups before making changes:
+
+```bash
+# Create a snapshot
+node create-snapshot.js example.com "Before migration"
+
+# List all snapshots
+node list-snapshots.js example.com
+
+# Restore from a snapshot
+node restore-snapshot.js example.com abc123-def456-ghi789
+
+# Restore without confirmation
+node restore-snapshot.js example.com abc123-def456-ghi789 --force
+```
+
+**Automatic snapshots:**
+- Bulk updates automatically create snapshots (unless `--no-snapshot`)
+- Snapshots are named with timestamp
+- Use snapshots for easy rollback
+
+### Common DNS Configuration Examples
+
+#### Basic Website Setup
+```bash
+# Root domain
+node add-dns-record.js example.com @ A 192.168.1.1
+
+# WWW subdomain
+node add-dns-record.js example.com www CNAME @
+```
+
+#### Email Configuration (Google Workspace)
+```bash
+# MX records
+node add-dns-record.js example.com @ MX "1 ASPMX.L.GOOGLE.COM."
+node add-dns-record.js example.com @ MX "5 ALT1.ASPMX.L.GOOGLE.COM."
+node add-dns-record.js example.com @ MX "5 ALT2.ASPMX.L.GOOGLE.COM."
+
+# SPF record
+node add-dns-record.js example.com @ TXT "v=spf1 include:_spf.google.com ~all"
+```
+
+#### Domain Redirect Setup
+To redirect one domain to another:
+
+```bash
+# Point root domain to same server
+node add-dns-record.js old-domain.com @ A 192.168.1.1
+
+# Point www to same CNAME
+node add-dns-record.js old-domain.com www CNAME @
+```
+
+Then configure HTTP 301 redirect at the server level.
+
+#### Subdomain Setup
+```bash
+# API subdomain
+node add-dns-record.js example.com api A 192.168.1.10
+
+# Staging subdomain
+node add-dns-record.js example.com staging A 192.168.1.20
+
+# Wildcard subdomain
+node add-dns-record.js example.com "*" A 192.168.1.100
+```
+
+## Helper Scripts
+
+All scripts are in `gandi-skill/scripts/`:
+
+### Authentication & Setup
+| Script | Purpose |
+|--------|---------|
+| `test-auth.js` | Verify authentication works |
+| `setup-contact.js` | Save contact info for domain registration (run once) |
+| `view-contact.js` | View saved contact information |
+| `delete-contact.js` | Delete saved contact (with optional --force) |
+
+### Domain & DNS Viewing
+| Script | Purpose |
+|--------|---------|
+| `list-domains.js` | Show all domains in account |
+| `list-dns.js <domain>` | Show DNS records for domain |
+| `check-domain.js <domain>` | Check single domain availability + pricing |
+| `suggest-domains.js <name>` | Smart domain suggestions with variations |
+| `check-ssl.js` | Check SSL certificate status for all domains |
+
+### DNS Modification (Phase 2)
+| Script | Purpose |
+|--------|---------|
+| `add-dns-record.js <domain> <name> <type> <value> [ttl]` | Add or update a DNS record |
+| `delete-dns-record.js <domain> <name> <type> [--force]` | Delete a DNS record |
+| `update-dns-bulk.js <domain> <records.json> [--no-snapshot] [--force]` | Bulk update all DNS records |
+| `list-snapshots.js <domain>` | List DNS zone snapshots |
+| `create-snapshot.js <domain> [name]` | Create a DNS zone snapshot |
+| `restore-snapshot.js <domain> <snapshot-id> [--force]` | Restore DNS zone from snapshot |
+
+### Core Library
+| Script | Purpose |
+|--------|---------|
+| `gandi-api.js` | Core API client (importable) |
+
+## Configuration
+
+### Default Configuration
+
+- **Token file:** `~/.config/gandi/api_token` (API authentication)
+- **Contact file:** `~/.config/gandi/contact.json` (domain registration info, optional)
+- **API URL:** `https://api.gandi.net` (production)
+
+### Sandbox Testing
+
+To use Gandi's sandbox environment:
+
+```bash
+# Create sandbox token at: https://admin.sandbox.gandi.net
+echo "YOUR_SANDBOX_TOKEN" > ~/.config/gandi/api_token
+echo "https://api.sandbox.gandi.net" > ~/.config/gandi/api_url
 ```
 
 ## Troubleshooting
@@ -903,144 +572,153 @@ ls -la ~/.config/gandi/api_token
 # Should show: -rw------- (600 permissions)
 ```
 
-**Fix:**
-```bash
-chmod 600 ~/.config/gandi/api_token
-```
-
 ### Authentication Failed (401)
 
-- Token is incorrect, expired, or revoked
-- Token doesn't have required scopes
-- Create new token at [Gandi Admin](https://admin.gandi.net/organizations/account/pat)
+- Token is incorrect or expired
+- Create new token at Gandi Admin
+- Update stored token file
 
 ### Permission Denied (403)
 
-- Token lacks required scopes (add Domain:read, LiveDNS:read)
-- Resource belongs to different organization
+- Token doesn't have required scopes
+- Create new token with Domain:read and LiveDNS:read
+- Verify organization membership
 
-### Rate Limit Errors (429)
+### Domain Not Using LiveDNS
 
-- Automatic rate limiting should prevent this
-- If it happens, increase `delayMs` in config
-- Reduce `maxConcurrent` to be more conservative
+If you get "not using Gandi LiveDNS" error:
+1. Log in to Gandi Admin
+2. Go to domain management
+3. Attach LiveDNS service to the domain
 
-### Domain Not Found (404)
+### Rate Limit (429)
 
-- Domain doesn't exist in your account
-- Check domain spelling
-- Verify you're using production API (not sandbox)
+Gandi allows 1000 requests/minute. If exceeded:
+- Wait 60 seconds
+- Reduce frequency of API calls
 
-## Development
+## API Reference
 
-### Project Structure
+The skill provides importable functions:
 
-```
-moltbot-gandi-skill/
-├── README.md                    # This file
-├── LICENSE                      # MIT License
-├── gandi-skill/
-│   ├── SKILL.md                 # Skill documentation
-│   ├── config/
-│   │   └── domain-checker-defaults.json
-│   ├── references/              # API documentation
-│   │   ├── api-overview.md
-│   │   ├── authentication.md
-│   │   ├── domains.md
-│   │   ├── livedns.md
-│   │   └── setup.md
-│   └── scripts/
-│       ├── gandi-api.js         # Core API client
-│       ├── test-auth.js         # Authentication tester
-│       ├── list-domains.js      # Domain lister
-│       ├── list-dns.js          # DNS record viewer
-│       ├── check-domain.js      # Single domain availability
-│       ├── suggest-domains.js   # Smart domain suggestions
-│       └── check-ssl.js         # SSL certificate checker
-└── docs/
-    └── gateway-config-design.md # Gateway Console architecture
-```
+```javascript
+import { 
+  testAuth,
+  listDomains,
+  getDomain,
+  listDnsRecords,
+  getDnsRecord,
+  checkAvailability
+} from './gandi-api.js';
 
-### Running Tests
+// Test authentication
+const auth = await testAuth();
 
-```bash
-cd gandi-skill/scripts
+// List domains
+const domains = await listDomains();
 
-# Test authentication
-node test-auth.js
+// Get domain info
+const domain = await getDomain('example.com');
 
-# Test domain listing
-node list-domains.js
+// List DNS records
+const records = await listDnsRecords('example.com');
 
-# Test DNS operations
-node list-dns.js yourdomain.com
+// Get specific DNS record
+const record = await getDnsRecord('example.com', '@', 'A');
 
-# Test availability checking
-node check-domain.js example.com
-node suggest-domains.js example --tlds com,net
+// Check availability
+const available = await checkAvailability(['example.com', 'example.net']);
 ```
 
-### API Documentation
+## Security
 
-Complete Gandi API documentation is available in `gandi-skill/references/`:
-- `api-overview.md` - RESTful API basics
-- `authentication.md` - Token creation and security
-- `domains.md` - Domain management operations
-- `livedns.md` - DNS record management
-- `setup.md` - Complete setup walkthrough
+### Token Storage
+
+✅ **DO:**
+- Store at `~/.config/gandi/api_token`
+- Use 600 permissions (owner read-only)
+- Rotate tokens regularly
+- Use minimal required scopes
+
+❌ **DON'T:**
+- Commit tokens to repositories
+- Share tokens between users
+- Give tokens unnecessary permissions
+- Store tokens in scripts
+
+### Token Scopes
+
+**Phase 1 (current):**
+- Domain: read
+- LiveDNS: read
+
+**Phase 2+ (future):**
+- Domain: read, write (for registration, renewal)
+- LiveDNS: read, write (for DNS modifications)
+- Certificate: read (optional, for SSL certs)
+- Email: read, write (optional, for email config)
+
+## Architecture
+
+```
+gandi-skill/
+├── SKILL.md                 # This file
+├── references/              # API documentation
+│   ├── api-overview.md
+│   ├── authentication.md
+│   ├── domains.md
+│   ├── livedns.md
+│   └── setup.md
+└── scripts/                 # Helper utilities
+    ├── package.json
+    ├── gandi-api.js         # Core API client
+    ├── test-auth.js         # Test authentication
+    ├── list-domains.js      # List domains
+    └── list-dns.js          # List DNS records
+```
+
+## Development Roadmap
+
+**Phase 1: Read Operations** (✅ Current)
+- Authentication with PAT
+- List domains
+- Get domain details
+- List DNS records
+- Basic error handling
+
+**Phase 2: DNS Modifications**
+- Add DNS records
+- Update DNS records
+- Delete DNS records
+- Bulk DNS operations
+
+**Phase 3: Domain Management**
+- Domain registration
+- Domain renewal
+- Auto-renewal configuration
+- Nameserver management
+
+**Phase 4: Multi-Organization** ([#1](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/1))
+- Profile-based token management
+- Organization selection
+- Multiple token support
+
+**Phase 5: Advanced Features**
+- DNSSEC management
+- Certificate management
+- Email/mailbox configuration
+- Domain transfer operations
 
 ## Contributing
 
-Contributions are welcome! This skill follows [Moltbot skill standards](https://github.com/openclaw/openclaw/blob/main/skills/skill-creator/SKILL.md).
+See [Contributing Guide](../../README.md#contributing) in the main README.
 
-**To contribute:**
+## Support
 
-1. Fork this repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes (follow existing structure and style)
-4. Test with a real Gandi account (or sandbox)
-5. Commit your changes with conventional commits
-6. Push to your branch (`git push origin feature/amazing-feature`)
-7. Submit a pull request
-
-**Coding Standards:**
-- Use ES modules (`import`/`export`)
-- Follow existing code style
-- Add JSDoc comments for functions
-- Handle errors gracefully
-- Include usage examples in scripts
-- Update documentation for new features
-
-**Bug Reports:**
-- Open an issue with detailed description
-- Include error messages and stack traces
-- Mention your environment (OS, Node version)
-- Provide steps to reproduce
-
-## Roadmap
-
-See [GitHub Issues](https://github.com/chrisagiddings/moltbot-gandi-skill/issues) for planned features and known bugs:
-
-- [#1](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/1) - Multi-organization support (Phase 2)
-- [#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3) - Gateway Console configuration
-- [#4](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/4) - Domain availability checker ✅ Complete
-- [#5](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/5) - Batch domain checking bug
-- [#6](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/6) - Rate limiting and result caps ✅ Complete
+- **Issues:** [GitHub Issues](https://github.com/chrisagiddings/moltbot-gandi-skill/issues)
+- **Documentation:** [Reference Guides](./references/)
+- **Gandi Support:** [help.gandi.net](https://help.gandi.net/)
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) for details.
-
-## Links
-
-- **Repository:** https://github.com/chrisagiddings/moltbot-gandi-skill
-- **Issues:** https://github.com/chrisagiddings/moltbot-gandi-skill/issues
-- **Gandi:** https://www.gandi.net
-- **Gandi API Docs:** https://api.gandi.net/docs/
-- **Moltbot:** https://github.com/openclaw/openclaw
-
----
-
-**Note:** This skill is community-created and not officially maintained by Gandi or Moltbot. Use responsibly and at your own discretion.
-
-**API Citizenship:** This skill implements responsible rate limiting (100 requests/min, 10% of Gandi's limit) to ensure good API citizenship. Please maintain these limits when contributing.
+MIT License - See [LICENSE](../../LICENSE)

@@ -1,143 +1,112 @@
 #!/usr/bin/env node
 
 /**
- * Add or update DNS record via Gandi LiveDNS API
- * 
- * Usage:
- *   node add-dns-record.js <domain> <type> <name> <value> [ttl]
- * 
+ * Add or update a DNS record
+ * Usage: node add-dns-record.js <domain> <name> <type> <value> [ttl]
  * Examples:
- *   node add-dns-record.js example.com A www 192.0.2.1
- *   node add-dns-record.js example.com CNAME blog example.com. 3600
- *   node add-dns-record.js example.com MX @ "10 mail.example.com."
- *   node add-dns-record.js example.com TXT @ "v=spf1 include:_spf.google.com ~all"
+ *   node add-dns-record.js example.com @ A 192.168.1.1
+ *   node add-dns-record.js example.com www CNAME @ 300
+ *   node add-dns-record.js example.com @ MX "10 mail.example.com." 10800
  */
 
-import {
-  createDnsRecord,
-  getDnsRecord,
-  validateRecordValue,
-  isValidTTL,
-  createSnapshot
-} from './gandi-api.js';
+import { createDnsRecord, validateRecordValue, isValidTTL, getDnsRecord } from './gandi-api.js';
 
-// Parse command line arguments
-const args = process.argv.slice(2);
+const [,, domain, name, type, ...rest] = process.argv;
 
-if (args.length < 4) {
-  console.error('Usage: node add-dns-record.js <domain> <type> <name> <value> [ttl]');
+// Check required arguments
+if (!domain || !name || !type || rest.length === 0) {
+  console.error('❌ Usage: node add-dns-record.js <domain> <name> <type> <value> [ttl]');
   console.error('');
   console.error('Examples:');
-  console.error('  node add-dns-record.js example.com A www 192.0.2.1');
-  console.error('  node add-dns-record.js example.com CNAME blog example.com. 3600');
-  console.error('  node add-dns-record.js example.com MX @ "10 mail.example.com."');
-  console.error('  node add-dns-record.js example.com TXT _verification "token123"');
+  console.error('  node add-dns-record.js example.com @ A 192.168.1.1');
+  console.error('  node add-dns-record.js example.com www CNAME @ 300');
+  console.error('  node add-dns-record.js example.com @ MX "10 mail.example.com." 10800');
+  console.error('  node add-dns-record.js example.com @ TXT "v=spf1 include:_spf.google.com ~all"');
   console.error('');
-  console.error('Common record types: A, AAAA, CNAME, MX, TXT, NS, SRV, CAA');
-  console.error('Use @ for root domain, e.g., example.com A @ 192.0.2.1');
-  console.error('');
-  console.error('TTL defaults to 10800 seconds (3 hours) if not specified.');
-  console.error('Valid TTL range: 300 (5 min) to 2592000 (30 days)');
+  console.error('Record types: A, AAAA, CNAME, MX, TXT, NS, SRV, CAA, PTR');
+  console.error('Name: Use @ for root domain, or subdomain name');
+  console.error('TTL: Time to live in seconds (300-2592000, default: 10800)');
   process.exit(1);
 }
 
-const domain = args[0];
-const type = args[1].toUpperCase();
-const name = args[2];
-const value = args[3];
-const ttl = args[4] ? parseInt(args[4], 10) : 10800;
+// Parse TTL (last argument might be TTL)
+let value;
+let ttl = 10800; // Default 3 hours
 
-// Validate inputs
-if (!domain || !type || !name || !value) {
-  console.error('❌ Error: Missing required arguments');
-  process.exit(1);
+if (rest.length > 1) {
+  // Check if last arg is a number (TTL)
+  const lastArg = rest[rest.length - 1];
+  if (!isNaN(parseInt(lastArg)) && isValidTTL(parseInt(lastArg))) {
+    ttl = parseInt(lastArg);
+    value = rest.slice(0, -1).join(' ');
+  } else {
+    value = rest.join(' ');
+  }
+} else {
+  value = rest[0];
 }
 
-if (!isValidTTL(ttl)) {
-  console.error(`❌ Error: Invalid TTL ${ttl}. Must be between 300 and 2592000 seconds.`);
-  process.exit(1);
-}
-
-const validation = validateRecordValue(type, value);
-if (!validation.valid) {
-  console.error(`❌ Error: ${validation.error}`);
-  process.exit(1);
-}
-
-// Main function
 async function main() {
   try {
-    console.log(`📝 Adding/updating DNS record for ${domain}`);
-    console.log(`   Type: ${type}`);
-    console.log(`   Name: ${name}`);
+    console.log(`🔄 Adding/updating ${type} record for ${name}.${domain}...`);
     console.log(`   Value: ${value}`);
-    console.log(`   TTL: ${ttl} seconds`);
+    console.log(`   TTL: ${ttl}s`);
     console.log('');
     
+    // Validate record value
+    const validation = validateRecordValue(type, value);
+    if (!validation.valid) {
+      console.error(`❌ Validation error: ${validation.error}`);
+      process.exit(1);
+    }
+    
     // Check if record already exists
-    let recordExists = false;
+    let existingRecord = null;
     try {
-      const existing = await getDnsRecord(domain, name, type);
-      recordExists = true;
-      console.log('⚠️  Record already exists:');
-      console.log(`   Current values: ${existing.rrset_values.join(', ')}`);
-      console.log(`   Current TTL: ${existing.rrset_ttl}`);
+      existingRecord = await getDnsRecord(domain, name, type);
+      console.log('ℹ️  Record already exists, will be replaced:');
+      console.log(`   Current value(s): ${existingRecord.rrset_values.join(', ')}`);
+      console.log(`   Current TTL: ${existingRecord.rrset_ttl}s`);
       console.log('');
-      console.log('⚠️  This will REPLACE the existing record!');
-      console.log('');
-      
-      // Create automatic snapshot before updating
-      const snapshotName = `Before updating ${name}.${domain} ${type} - ${new Date().toISOString()}`;
-      console.log('📸 Creating automatic snapshot...');
-      try {
-        const snapshot = await createSnapshot(domain, snapshotName);
-        console.log(`✅ Snapshot created: ${snapshot.id || 'success'}`);
-      } catch (snapErr) {
-        console.warn('⚠️  Could not create snapshot (continuing anyway):', snapErr.message);
-      }
-      console.log('');
-    } catch (err) {
-      if (err.statusCode !== 404) {
-        throw err;
-      }
-      // Record doesn't exist, will be created
-      console.log('✨ Creating new record...');
+    } catch (error) {
+      // Record doesn't exist, that's okay
+      console.log('ℹ️  Creating new record...');
       console.log('');
     }
     
     // Create/update the record
     const result = await createDnsRecord(domain, name, type, [value], ttl);
     
-    if (result.statusCode === 201 || result.statusCode === 204) {
-      console.log('✅ DNS record successfully ' + (recordExists ? 'updated' : 'created') + '!');
-      console.log('');
-      console.log('⏱️  DNS Propagation:');
-      console.log('   - Gandi nameservers: immediate');
-      console.log('   - Local cache: ~5 minutes');
-      console.log(`   - Global: up to ${ttl} seconds (current TTL)`);
-      console.log('');
-      console.log('🔍 Verify with:');
-      console.log(`   dig ${name === '@' ? domain : name + '.' + domain} ${type}`);
-      console.log(`   dig @ns1.gandi.net ${name === '@' ? domain : name + '.' + domain} ${type}`);
+    if (result.statusCode === 201) {
+      console.log('✅ DNS record created successfully!');
+    } else if (result.statusCode === 200) {
+      console.log('✅ DNS record updated successfully!');
     } else {
-      console.log(`⚠️  Unexpected response: HTTP ${result.statusCode}`);
+      console.log(`✅ DNS record saved (status: ${result.statusCode})`);
     }
+    
+    console.log('');
+    console.log('📋 Record details:');
+    console.log(`   Domain: ${domain}`);
+    console.log(`   Name: ${name}`);
+    console.log(`   Type: ${type}`);
+    console.log(`   Value: ${value}`);
+    console.log(`   TTL: ${ttl}s (${Math.floor(ttl / 60)} minutes)`);
+    console.log('');
+    console.log('⏱️  DNS propagation may take a few minutes.');
+    console.log('   Verify with: dig @ns1.gandi.net ' + (name === '@' ? domain : `${name}.${domain}`) + ' ' + type);
     
   } catch (error) {
     console.error('❌ Error:', error.message);
     
     if (error.statusCode === 401) {
-      console.error('');
-      console.error('Authentication failed. Check your API token.');
+      console.error('   Authentication failed. Check your API token.');
     } else if (error.statusCode === 403) {
-      console.error('');
-      console.error('Permission denied. Ensure your API token has LiveDNS: write scope.');
-      console.error('Create a new token at: https://admin.gandi.net/organizations/account/pat');
+      console.error('   Permission denied. Ensure your token has LiveDNS write access.');
     } else if (error.statusCode === 404) {
-      console.error('');
-      console.error('Domain not found or not using Gandi LiveDNS.');
+      console.error(`   Domain ${domain} not found or not using Gandi LiveDNS.`);
     } else if (error.response) {
-      console.error('API response:', JSON.stringify(error.response, null, 2));
+      console.error('   API response:', JSON.stringify(error.response, null, 2));
     }
     
     process.exit(1);
