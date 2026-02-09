@@ -1,137 +1,117 @@
 #!/usr/bin/env node
 
 /**
- * Delete email forward for a domain
- * 
- * Usage:
- *   node delete-email-forward.js <domain> <mailbox> [--confirm]
- * 
+ * Delete an email forward
+ * Usage: node delete-email-forward.js <domain> <mailbox> [--force]
  * Examples:
- *   node delete-email-forward.js example.com hello --confirm
- *   node delete-email-forward.js example.com old-alias
+ *   node delete-email-forward.js example.com old
+ *   node delete-email-forward.js example.com @ --force  # Delete catch-all
  */
 
-import {
-  getEmailForward,
-  deleteEmailForward
-} from './gandi-api.js';
+import { deleteEmailForward, getEmailForward } from './gandi-api.js';
 import readline from 'readline';
 
-// Parse command line arguments
 const args = process.argv.slice(2);
+const force = args.includes('--force');
+const [domain, mailbox] = args.filter(arg => !arg.startsWith('--'));
 
-if (args.length < 2) {
-  console.error('Usage: node delete-email-forward.js <domain> <mailbox> [--confirm]');
+if (!domain || !mailbox) {
+  console.error('❌ Usage: node delete-email-forward.js <domain> <mailbox> [--force]');
   console.error('');
   console.error('Examples:');
-  console.error('  node delete-email-forward.js example.com hello --confirm');
-  console.error('  node delete-email-forward.js example.com old-alias');
+  console.error('  node delete-email-forward.js example.com old');
+  console.error('  node delete-email-forward.js example.com @ --force  # Delete catch-all');
   console.error('');
-  console.error('⚠️  Deleting email forwards will stop forwarding immediately!');
+  console.error('Options:');
+  console.error('  --force    Skip confirmation prompt');
   process.exit(1);
 }
 
-const domain = args[0];
-const mailbox = args[1];
-const autoConfirm = args.includes('--confirm');
-
-// Prompt for confirmation
-function confirm(message) {
+async function confirmDelete(forward) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
     
-    rl.question(message, (answer) => {
+    const sourceDisplay = mailbox === '@' ? '@ (catch-all)' : mailbox;
+    console.log('');
+    console.log('⚠️  Are you sure you want to delete this email forward?');
+    console.log(`   From: ${sourceDisplay}@${domain}`);
+    console.log(`   To: ${forward.destinations.join(', ')}`);
+    console.log('');
+    
+    rl.question('Type "delete" to confirm: ', (answer) => {
       rl.close();
-      resolve(answer.toLowerCase().startsWith('y'));
+      resolve(answer.toLowerCase() === 'delete');
     });
   });
 }
 
-// Main function
 async function main() {
   try {
-    const isCatchAll = mailbox === '@' || mailbox === '*';
-    const displayName = isCatchAll ? `@${domain}` : `${mailbox}@${domain}`;
-    
-    console.log(`🗑️  Deleting email forward for ${domain}...`);
+    const sourceDisplay = mailbox === '@' ? '@ (catch-all)' : mailbox;
+    console.log(`🔍 Checking email forward for ${sourceDisplay}@${domain}...`);
     console.log('');
     
-    // Check if forward exists
-    let existing;
+    // Get current forward
+    let forward;
     try {
-      existing = await getEmailForward(domain, mailbox);
-    } catch (err) {
-      if (err.statusCode === 404) {
-        console.error(`❌ Email forward not found for ${displayName}`);
+      forward = await getEmailForward(domain, mailbox);
+    } catch (error) {
+      if (error.statusCode === 404) {
+        console.error(`❌ Email forward not found: ${sourceDisplay}@${domain}`);
+        console.error('   The forward may have already been deleted.');
         console.error('');
-        console.error('📊 To view all forwards:');
+        console.error('💡 To list all forwards:');
         console.error(`   node list-email-forwards.js ${domain}`);
         process.exit(1);
       }
-      throw err;
+      throw error;
     }
     
-    console.log('📋 Forward to be deleted:');
-    console.log(`   From: ${displayName}`);
-    console.log(`   To: ${existing.destinations.join(', ')}`);
-    console.log('');
+    // Show current forward
+    console.log('📋 Email forward to be deleted:');
+    console.log(`   From: ${sourceDisplay}@${domain}`);
+    console.log(`   To:`);
+    forward.destinations.forEach(dest => {
+      console.log(`   → ${dest}`);
+    });
     
-    // Extra warning for catch-all
-    if (isCatchAll) {
-      console.log('⚠️  WARNING: This is a CATCH-ALL forward!');
-      console.log('   Deleting it will stop forwarding all unmatched emails.');
-      console.log('');
-    }
-    
-    // Confirmation
-    if (!autoConfirm) {
-      console.log('⚠️  Deleting this forward will stop email forwarding immediately.');
-      console.log('   Emails sent to this address will bounce after deletion.');
-      console.log('');
-      
-      const confirmed = await confirm('Are you sure you want to delete this forward? (yes/no): ');
-      
+    // Confirm deletion (unless --force)
+    if (!force) {
+      const confirmed = await confirmDelete(forward);
       if (!confirmed) {
+        console.log('');
         console.log('❌ Deletion cancelled.');
         process.exit(0);
       }
-      console.log('');
     }
     
     // Delete the forward
-    console.log('🗑️  Deleting...');
+    console.log('');
+    console.log('🗑️  Deleting email forward...');
     await deleteEmailForward(domain, mailbox);
     
     console.log('✅ Email forward deleted successfully!');
     console.log('');
-    console.log(`   ${displayName} is no longer forwarded`);
+    console.log('⏱️  Changes should be active immediately.');
+    console.log(`   Emails to ${sourceDisplay}@${domain} will no longer be forwarded.`);
     console.log('');
-    console.log('⚠️  Emails sent to this address will now bounce.');
-    console.log('');
-    console.log('💡 To recreate this forward:');
-    console.log(`   node add-email-forward.js ${domain} ${mailbox} <destination>`);
-    console.log('');
-    console.log('📊 To view remaining forwards:');
+    console.log('💡 To list remaining forwards:');
     console.log(`   node list-email-forwards.js ${domain}`);
     
   } catch (error) {
     console.error('❌ Error:', error.message);
     
     if (error.statusCode === 401) {
-      console.error('');
-      console.error('Authentication failed. Check your API token.');
+      console.error('   Authentication failed. Check your API token.');
     } else if (error.statusCode === 403) {
-      console.error('');
-      console.error('Permission denied. Ensure your API token has Email: write scope.');
-      console.error('Create a new token at: https://admin.gandi.net/organizations/account/pat');
+      console.error('   Permission denied. Ensure your token has Email write access.');
     } else if (error.statusCode === 404) {
-      console.error('');
-      console.error('Forward not found. Check the mailbox name.');
+      console.error(`   Domain ${domain} or forward not found.`);
     } else if (error.response) {
-      console.error('API response:', JSON.stringify(error.response, null, 2));
+      console.error('   API response:', JSON.stringify(error.response, null, 2));
     }
     
     process.exit(1);

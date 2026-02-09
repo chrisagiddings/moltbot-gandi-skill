@@ -27,6 +27,7 @@ Comprehensive Gandi domain registrar integration for Moltbot.
 - ✅ **Delete DNS records**
 - ✅ **Bulk DNS operations** (replace all records at once)
 - ✅ **DNS zone snapshots** (create, list, restore)
+- ✅ **Email forwarding** (create, list, update, delete forwards including catch-all)
 - ✅ **Record validation** (automatic validation for each record type)
 - ✅ **Safety features** (automatic snapshots before bulk changes, confirmation prompts)
 
@@ -38,7 +39,7 @@ Comprehensive Gandi domain registrar integration for Moltbot.
 - Domain renewal management
 - DNSSEC configuration
 - Certificate management
-- Email forwarding configuration
+- Email mailbox management (beyond forwarding)
 
 ## Setup
 
@@ -51,9 +52,11 @@ Comprehensive Gandi domain registrar integration for Moltbot.
    - ✅ Domain: read (required for listing domains)
    - ✅ LiveDNS: read (required for viewing DNS records)
    - ✅ LiveDNS: write (**required for Phase 2 - DNS modification**)
+   - ✅ Email: read (required for viewing email forwards)
+   - ✅ Email: write (**required for Phase 2 - email forwarding management**)
 5. Copy the token (you won't see it again!)
 
-**Note:** If you only need read-only access (Phase 1), you can skip the LiveDNS write permission.
+**Note:** If you only need read-only access (Phase 1), you can skip the write permissions.
 
 ### Step 2: Store Token
 
@@ -507,6 +510,134 @@ node add-dns-record.js example.com staging A 192.168.1.20
 node add-dns-record.js example.com "*" A 192.168.1.100
 ```
 
+## Email Forwarding (Phase 2)
+
+### List Email Forwards
+
+See all email forwards configured for a domain:
+
+```bash
+node list-email-forwards.js example.com
+```
+
+### Create Email Forwards
+
+Forward emails to one or more destinations:
+
+```bash
+# Simple forward
+node add-email-forward.js example.com hello you@personal.com
+
+# Forward to multiple destinations
+node add-email-forward.js example.com support team1@example.com team2@example.com
+
+# Catch-all forward (forwards all unmatched emails)
+node add-email-forward.js example.com @ catchall@example.com
+```
+
+### Update Email Forwards
+
+Change the destination(s) for an existing forward:
+
+```bash
+# Update single destination
+node update-email-forward.js example.com hello newemail@personal.com
+
+# Update to multiple destinations
+node update-email-forward.js example.com support new1@example.com new2@example.com
+```
+
+**Note:** This replaces all existing destinations with the new ones.
+
+### Delete Email Forwards
+
+Remove email forwards:
+
+```bash
+# Delete with confirmation prompt
+node delete-email-forward.js example.com old
+
+# Delete without confirmation
+node delete-email-forward.js example.com old --force
+
+# Delete catch-all forward
+node delete-email-forward.js example.com @ --force
+```
+
+### Common Email Forwarding Use Cases
+
+#### Basic Email Forwarding
+```bash
+# Forward contact@ to your personal email
+node add-email-forward.js example.com contact you@gmail.com
+
+# Forward sales@ to team
+node add-email-forward.js example.com sales team@example.com
+```
+
+#### Domain Migration Email Forwarding
+```bash
+# Forward all email from old domain to new domain
+# Preserves the local part (username before @)
+
+# First, list existing forwards on old domain
+node list-email-forwards.js old-domain.com
+
+# Then create matching forwards on new domain
+node add-email-forward.js old-domain.com contact contact@new-domain.com
+node add-email-forward.js old-domain.com support support@new-domain.com
+
+# Or use catch-all to forward everything
+node add-email-forward.js old-domain.com @ admin@new-domain.com
+```
+
+#### Team Distribution Lists
+```bash
+# Forward to entire team
+node add-email-forward.js example.com team alice@example.com bob@example.com charlie@example.com
+
+# Update team members
+node update-email-forward.js example.com team alice@example.com dave@example.com
+```
+
+#### Catch-All Configuration
+```bash
+# Forward all unmatched emails to one address
+node add-email-forward.js example.com @ catchall@example.com
+
+# Forward all unmatched emails to multiple addresses
+node add-email-forward.js example.com @ admin1@example.com admin2@example.com
+```
+
+**Note:** Catch-all forwards only apply to email addresses that don't have specific forwards configured.
+
+### Email Forward Management Tips
+
+1. **Test after creating:** Send a test email to verify forwarding works
+2. **Use specific forwards over catch-all:** More control and easier to manage
+3. **Multiple destinations:** Email is sent to all destinations (not round-robin)
+4. **Order doesn't matter:** Gandi processes most specific match first
+5. **Check spam folders:** Forwarded emails may be filtered by recipient's spam filter
+
+### Example: Complete Domain Email Setup
+
+```bash
+# 1. Set up MX records (if not already done)
+node add-dns-record.js example.com @ MX "10 spool.mail.gandi.net."
+node add-dns-record.js example.com @ MX "50 fb.mail.gandi.net."
+
+# 2. Create specific forwards
+node add-email-forward.js example.com hello you@personal.com
+node add-email-forward.js example.com support team@example.com
+node add-email-forward.js example.com sales sales-team@example.com
+
+# 3. Set up catch-all for everything else
+node add-email-forward.js example.com @ admin@example.com
+
+# 4. List all forwards to verify
+node list-email-forwards.js example.com
+```
+
 ## Helper Scripts
 
 All scripts are in `gandi-skill/scripts/`:
@@ -537,6 +668,14 @@ All scripts are in `gandi-skill/scripts/`:
 | `list-snapshots.js <domain>` | List DNS zone snapshots |
 | `create-snapshot.js <domain> [name]` | Create a DNS zone snapshot |
 | `restore-snapshot.js <domain> <snapshot-id> [--force]` | Restore DNS zone from snapshot |
+
+### Email Forwarding (Phase 2)
+| Script | Purpose |
+|--------|---------|
+| `list-email-forwards.js <domain>` | List all email forwards for a domain |
+| `add-email-forward.js <domain> <mailbox> <destination> [dest2...]` | Create email forward (use @ for catch-all) |
+| `update-email-forward.js <domain> <mailbox> <destination> [dest2...]` | Update email forward destinations |
+| `delete-email-forward.js <domain> <mailbox> [--force]` | Delete email forward |
 
 ### Core Library
 | Script | Purpose |

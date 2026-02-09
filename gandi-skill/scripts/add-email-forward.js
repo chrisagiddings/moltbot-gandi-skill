@@ -1,171 +1,107 @@
 #!/usr/bin/env node
 
 /**
- * Add email forward for a domain
- * 
- * Usage:
- *   node add-email-forward.js <domain> <mailbox> <destination> [additional-destinations...]
- * 
+ * Create an email forward
+ * Usage: node add-email-forward.js <domain> <mailbox> <destination> [destination2] [destination3]...
  * Examples:
- *   node add-email-forward.js example.com hello hello@gmail.com
- *   node add-email-forward.js example.com support support@gmail.com support@company.com
- *   node add-email-forward.js example.com @ admin@gmail.com
+ *   node add-email-forward.js example.com hello you@example.com
+ *   node add-email-forward.js example.com contact support@example.com sales@example.com
+ *   node add-email-forward.js example.com @ catchall@example.com  # Catch-all
  */
 
-import {
-  getDomain,
-  getEmailForward,
-  createEmailForward
-} from './gandi-api.js';
+import { createEmailForward, getEmailForward } from './gandi-api.js';
 
-// Parse command line arguments
-const args = process.argv.slice(2);
+const [,, domain, mailbox, ...destinations] = process.argv;
 
-if (args.length < 3) {
-  console.error('Usage: node add-email-forward.js <domain> <mailbox> <destination> [additional-destinations...]');
+if (!domain || !mailbox || destinations.length === 0) {
+  console.error('❌ Usage: node add-email-forward.js <domain> <mailbox> <destination> [destination2]...');
   console.error('');
   console.error('Examples:');
-  console.error('  node add-email-forward.js example.com hello hello@gmail.com');
-  console.error('  node add-email-forward.js example.com support support@gmail.com team@company.com');
-  console.error('  node add-email-forward.js example.com @ admin@gmail.com  # Catch-all');
+  console.error('  node add-email-forward.js example.com hello you@example.com');
+  console.error('  node add-email-forward.js example.com contact support@example.com sales@example.com');
+  console.error('  node add-email-forward.js example.com @ catchall@example.com  # Catch-all');
   console.error('');
-  console.error('Mailbox options:');
-  console.error('  - Use any name (e.g., hello, support, info)');
+  console.error('Mailbox:');
   console.error('  - Use @ for catch-all (forwards all unmatched emails)');
+  console.error('  - Use specific name (hello, contact, support, etc.)');
   console.error('');
-  console.error('⚠️  Catch-all forwards can receive spam. Use with caution.');
+  console.error('Destinations:');
+  console.error('  - One or more email addresses to forward to');
+  console.error('  - Multiple destinations = email sent to all');
   process.exit(1);
 }
 
-const domain = args[0];
-const mailbox = args[1];
-const destinations = args.slice(2);
-
 // Validate email addresses
 function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
 }
 
-// Validate mailbox name
-function isValidMailbox(name) {
-  if (name === '@' || name === '*') return true; // Catch-all
-  return /^[a-z0-9._-]+$/i.test(name);
-}
-
-// Main function
 async function main() {
   try {
-    // Validate mailbox name
-    if (!isValidMailbox(mailbox)) {
-      console.error('❌ Invalid mailbox name. Use alphanumeric characters, dots, hyphens, or @ for catch-all.');
+    // Validate destination emails
+    const invalidEmails = destinations.filter(email => !isValidEmail(email));
+    if (invalidEmails.length > 0) {
+      console.error('❌ Invalid email address(es):');
+      invalidEmails.forEach(email => console.error(`   - ${email}`));
       process.exit(1);
     }
     
-    // Validate destination emails
-    for (const dest of destinations) {
-      if (!isValidEmail(dest)) {
-        console.error(`❌ Invalid email address: ${dest}`);
-        process.exit(1);
-      }
-    }
-    
-    const isCatchAll = mailbox === '@' || mailbox === '*';
-    const displayName = isCatchAll ? `@${domain}` : `${mailbox}@${domain}`;
-    
-    console.log(`📧 Creating email forward for ${domain}...`);
+    const sourceDisplay = mailbox === '@' ? '@ (catch-all)' : mailbox;
+    console.log(`📧 Creating email forward for ${sourceDisplay}@${domain}...`);
+    console.log(`   Forwarding to: ${destinations.join(', ')}`);
     console.log('');
-    console.log(`   From: ${displayName}`);
-    console.log(`   To: ${destinations.join(', ')}`);
-    console.log('');
-    
-    // Check if domain exists
-    try {
-      await getDomain(domain);
-    } catch (err) {
-      if (err.statusCode === 404) {
-        console.error(`❌ Domain ${domain} not found in your account`);
-        process.exit(1);
-      }
-      throw err;
-    }
     
     // Check if forward already exists
     try {
       const existing = await getEmailForward(domain, mailbox);
-      console.error(`❌ Email forward already exists for ${displayName}`);
+      console.error('❌ Email forward already exists!');
       console.error(`   Current destinations: ${existing.destinations.join(', ')}`);
       console.error('');
-      console.error('💡 To update this forward, use:');
+      console.error('💡 To update this forward:');
       console.error(`   node update-email-forward.js ${domain} ${mailbox} ${destinations.join(' ')}`);
+      console.error('');
+      console.error('💡 To delete and recreate:');
+      console.error(`   node delete-email-forward.js ${domain} ${mailbox}`);
       process.exit(1);
-    } catch (err) {
-      if (err.statusCode !== 404) {
-        throw err;
+    } catch (error) {
+      if (error.statusCode !== 404) {
+        throw error;
       }
-      // Forward doesn't exist, continue with creation
-    }
-    
-    // Warn about catch-all
-    if (isCatchAll) {
-      console.log('⚠️  WARNING: Catch-all forwards receive ALL unmatched emails');
-      console.log('   This can include spam and unwanted messages.');
-      console.log('   Consider using specific forwards instead (hello@, support@, etc.)');
-      console.log('');
+      // Forward doesn't exist, proceed with creation
     }
     
     // Create the forward
-    console.log('📤 Creating email forward...');
     const result = await createEmailForward(domain, mailbox, destinations);
     
     console.log('✅ Email forward created successfully!');
     console.log('');
-    console.log('📋 Forward Details:');
-    console.log(`   From: ${displayName}`);
-    console.log(`   To: ${destinations.join(', ')}`);
+    console.log('📋 Forward details:');
+    console.log(`   From: ${sourceDisplay}@${domain}`);
+    console.log(`   To:`);
+    destinations.forEach(dest => {
+      console.log(`   → ${dest}`);
+    });
     console.log('');
-    
-    if (isCatchAll) {
-      console.log('🌐 Catch-all forward is now active');
-      console.log('   All emails to unknown addresses will be forwarded');
-      console.log('');
-    }
-    
-    console.log('💡 Next steps:');
-    console.log('   1. Send a test email to verify forwarding works');
-    console.log(`   2. Check MX records if emails aren't being received`);
-    console.log(`   3. Configure SPF records for deliverability`);
+    console.log('⏱️  Email forwarding should be active immediately.');
+    console.log('   Test by sending an email to ' + (mailbox === '@' ? 'any address' : mailbox) + '@' + domain);
     console.log('');
-    console.log('📊 To view all forwards:');
+    console.log('💡 To list all forwards:');
     console.log(`   node list-email-forwards.js ${domain}`);
     
   } catch (error) {
     console.error('❌ Error:', error.message);
     
     if (error.statusCode === 401) {
-      console.error('');
-      console.error('Authentication failed. Check your API token.');
+      console.error('   Authentication failed. Check your API token.');
     } else if (error.statusCode === 403) {
-      console.error('');
-      console.error('Permission denied. Possible causes:');
-      console.error('  - API token lacks Email: write scope');
-      console.error('  - Email forwarding service not enabled for this domain');
-      console.error('');
-      console.error('Enable email forwarding at: https://admin.gandi.net/');
-      console.error('Create new token with Email: write at: https://admin.gandi.net/organizations/account/pat');
+      console.error('   Permission denied. Ensure your token has Email write access.');
+    } else if (error.statusCode === 404) {
+      console.error(`   Domain ${domain} not found or email service not enabled.`);
+      console.error('   Enable Gandi Mail service in your domain settings.');
     } else if (error.statusCode === 409) {
-      console.error('');
-      console.error('Forward already exists. Use update-email-forward.js to modify it.');
-    } else if (error.statusCode === 422) {
-      console.error('');
-      console.error('Validation failed. Check:');
-      console.error('  - Email addresses are valid');
-      console.error('  - Mailbox name is valid');
-      console.error('  - Email forwarding service is enabled');
-      if (error.response) {
-        console.error('Details:', JSON.stringify(error.response, null, 2));
-      }
+      console.error('   Email forward already exists. Use update-email-forward.js instead.');
     } else if (error.response) {
-      console.error('API response:', JSON.stringify(error.response, null, 2));
+      console.error('   API response:', JSON.stringify(error.response, null, 2));
     }
     
     process.exit(1);
