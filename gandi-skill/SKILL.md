@@ -1,16 +1,18 @@
 ---
 name: gandi
 description: "Manage Gandi domains, DNS, email, and SSL certificates via the Gandi API"
+metadata: {"openclaw":{"disable-model-invocation":true}}
 ---
 
 # Gandi Domain Registrar Skill
 
 Comprehensive Gandi domain registrar integration for Moltbot.
 
-**Status:** 🚧 Phase 1 MVP - Basic operations functional
+**Status:** ✅ Phase 2 Complete - DNS modification & snapshots functional
 
-## Current Capabilities (Phase 1)
+## Current Capabilities
 
+### Phase 1 (Complete)
 - ✅ Personal Access Token authentication
 - ✅ List domains in your account
 - ✅ Get domain details (expiration, status, services)
@@ -21,16 +23,24 @@ Comprehensive Gandi domain registrar integration for Moltbot.
 - ✅ SSL certificate status checker
 - ✅ Error handling and validation
 
-## Coming Soon (Phase 2+)
+### Phase 2 (Complete)
+- ✅ **Add/update DNS records** (A, AAAA, CNAME, MX, TXT, NS, SRV, CAA, PTR)
+- ✅ **Delete DNS records**
+- ✅ **Bulk DNS operations** (replace all records at once)
+- ✅ **DNS zone snapshots** (create, list, restore)
+- ✅ **Email forwarding** (create, list, update, delete forwards including catch-all)
+- ✅ **Record validation** (automatic validation for each record type)
+- ✅ **Safety features** (automatic snapshots before bulk changes, confirmation prompts)
+
+## Coming Soon (Phase 3+)
 
 - Domain registration
-- DNS record modification (add, update, delete)
 - Multi-organization support ([#1](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/1))
 - Gateway Console configuration ([#3](https://github.com/chrisagiddings/moltbot-gandi-skill/issues/3))
 - Domain renewal management
 - DNSSEC configuration
 - Certificate management
-- Email configuration
+- Email mailbox management (beyond forwarding)
 
 ## Setup
 
@@ -40,9 +50,14 @@ Comprehensive Gandi domain registrar integration for Moltbot.
 2. Click **"Create a token"**
 3. Select your organization
 4. Choose scopes:
-   - ✅ Domain: read (minimum)
-   - ✅ LiveDNS: read (for DNS operations)
+   - ✅ Domain: read (required for listing domains)
+   - ✅ LiveDNS: read (required for viewing DNS records)
+   - ✅ LiveDNS: write (**required for Phase 2 - DNS modification**)
+   - ✅ Email: read (required for viewing email forwards)
+   - ✅ Email: write (**required for Phase 2 - email forwarding management**)
 5. Copy the token (you won't see it again!)
+
+**Note:** If you only need read-only access (Phase 1), you can skip the write permissions.
 
 ### Step 2: Store Token
 
@@ -344,21 +359,328 @@ skills:
 
 See `docs/gateway-config-design.md` for complete configuration architecture.
 
+## DNS Management (Phase 2)
+
+### Add or Update DNS Records
+
+Create or update individual DNS records:
+
+```bash
+# Add an A record for root domain
+node add-dns-record.js example.com @ A 192.168.1.1
+
+# Add www subdomain pointing to root
+node add-dns-record.js example.com www CNAME @
+
+# Add MX record for email
+node add-dns-record.js example.com @ MX "10 mail.example.com."
+
+# Add TXT record for SPF
+node add-dns-record.js example.com @ TXT "v=spf1 include:_spf.google.com ~all"
+
+# Add with custom TTL (5 minutes)
+node add-dns-record.js example.com api A 192.168.1.10 300
+```
+
+**Supported record types:** A, AAAA, CNAME, MX, TXT, NS, SRV, CAA, PTR
+
+### Delete DNS Records
+
+Remove specific DNS records:
+
+```bash
+# Delete old A record
+node delete-dns-record.js example.com old A
+
+# Delete with confirmation prompt
+node delete-dns-record.js example.com test CNAME
+
+# Delete without confirmation
+node delete-dns-record.js example.com old A --force
+```
+
+### Bulk DNS Operations
+
+Replace all DNS records at once:
+
+```bash
+# From JSON file
+node update-dns-bulk.js example.com new-records.json
+
+# From stdin
+cat records.json | node update-dns-bulk.js example.com
+
+# Skip automatic snapshot
+node update-dns-bulk.js example.com records.json --no-snapshot
+
+# Skip confirmation
+node update-dns-bulk.js example.com records.json --force
+```
+
+**JSON format:**
+```json
+[
+  {
+    "rrset_name": "@",
+    "rrset_type": "A",
+    "rrset_ttl": 10800,
+    "rrset_values": ["192.168.1.1"]
+  },
+  {
+    "rrset_name": "www",
+    "rrset_type": "CNAME",
+    "rrset_ttl": 10800,
+    "rrset_values": ["@"]
+  },
+  {
+    "rrset_name": "@",
+    "rrset_type": "MX",
+    "rrset_ttl": 10800,
+    "rrset_values": ["10 mail.example.com.", "20 mail2.example.com."]
+  }
+]
+```
+
+### DNS Zone Snapshots
+
+Create safety backups before making changes:
+
+```bash
+# Create a snapshot
+node create-snapshot.js example.com "Before migration"
+
+# List all snapshots
+node list-snapshots.js example.com
+
+# Restore from a snapshot
+node restore-snapshot.js example.com abc123-def456-ghi789
+
+# Restore without confirmation
+node restore-snapshot.js example.com abc123-def456-ghi789 --force
+```
+
+**Automatic snapshots:**
+- Bulk updates automatically create snapshots (unless `--no-snapshot`)
+- Snapshots are named with timestamp
+- Use snapshots for easy rollback
+
+### Common DNS Configuration Examples
+
+#### Basic Website Setup
+```bash
+# Root domain
+node add-dns-record.js example.com @ A 192.168.1.1
+
+# WWW subdomain
+node add-dns-record.js example.com www CNAME @
+```
+
+#### Email Configuration (Google Workspace)
+```bash
+# MX records
+node add-dns-record.js example.com @ MX "1 ASPMX.L.GOOGLE.COM."
+node add-dns-record.js example.com @ MX "5 ALT1.ASPMX.L.GOOGLE.COM."
+node add-dns-record.js example.com @ MX "5 ALT2.ASPMX.L.GOOGLE.COM."
+
+# SPF record
+node add-dns-record.js example.com @ TXT "v=spf1 include:_spf.google.com ~all"
+```
+
+#### Domain Redirect Setup
+To redirect one domain to another:
+
+```bash
+# Point root domain to same server
+node add-dns-record.js old-domain.com @ A 192.168.1.1
+
+# Point www to same CNAME
+node add-dns-record.js old-domain.com www CNAME @
+```
+
+Then configure HTTP 301 redirect at the server level.
+
+#### Subdomain Setup
+```bash
+# API subdomain
+node add-dns-record.js example.com api A 192.168.1.10
+
+# Staging subdomain
+node add-dns-record.js example.com staging A 192.168.1.20
+
+# Wildcard subdomain
+node add-dns-record.js example.com "*" A 192.168.1.100
+```
+
+## Email Forwarding (Phase 2)
+
+### List Email Forwards
+
+See all email forwards configured for a domain:
+
+```bash
+node list-email-forwards.js example.com
+```
+
+### Create Email Forwards
+
+Forward emails to one or more destinations:
+
+```bash
+# Simple forward
+node add-email-forward.js example.com hello you@personal.com
+
+# Forward to multiple destinations
+node add-email-forward.js example.com support team1@example.com team2@example.com
+
+# Catch-all forward (forwards all unmatched emails)
+node add-email-forward.js example.com @ catchall@example.com
+```
+
+### Update Email Forwards
+
+Change the destination(s) for an existing forward:
+
+```bash
+# Update single destination
+node update-email-forward.js example.com hello newemail@personal.com
+
+# Update to multiple destinations
+node update-email-forward.js example.com support new1@example.com new2@example.com
+```
+
+**Note:** This replaces all existing destinations with the new ones.
+
+### Delete Email Forwards
+
+Remove email forwards:
+
+```bash
+# Delete with confirmation prompt
+node delete-email-forward.js example.com old
+
+# Delete without confirmation
+node delete-email-forward.js example.com old --force
+
+# Delete catch-all forward
+node delete-email-forward.js example.com @ --force
+```
+
+### Common Email Forwarding Use Cases
+
+#### Basic Email Forwarding
+```bash
+# Forward contact@ to your personal email
+node add-email-forward.js example.com contact you@gmail.com
+
+# Forward sales@ to team
+node add-email-forward.js example.com sales team@example.com
+```
+
+#### Domain Migration Email Forwarding
+```bash
+# Forward all email from old domain to new domain
+# Preserves the local part (username before @)
+
+# First, list existing forwards on old domain
+node list-email-forwards.js old-domain.com
+
+# Then create matching forwards on new domain
+node add-email-forward.js old-domain.com contact contact@new-domain.com
+node add-email-forward.js old-domain.com support support@new-domain.com
+
+# Or use catch-all to forward everything
+node add-email-forward.js old-domain.com @ admin@new-domain.com
+```
+
+#### Team Distribution Lists
+```bash
+# Forward to entire team
+node add-email-forward.js example.com team alice@example.com bob@example.com charlie@example.com
+
+# Update team members
+node update-email-forward.js example.com team alice@example.com dave@example.com
+```
+
+#### Catch-All Configuration
+```bash
+# Forward all unmatched emails to one address
+node add-email-forward.js example.com @ catchall@example.com
+
+# Forward all unmatched emails to multiple addresses
+node add-email-forward.js example.com @ admin1@example.com admin2@example.com
+```
+
+**Note:** Catch-all forwards only apply to email addresses that don't have specific forwards configured.
+
+### Email Forward Management Tips
+
+1. **Test after creating:** Send a test email to verify forwarding works
+2. **Use specific forwards over catch-all:** More control and easier to manage
+3. **Multiple destinations:** Email is sent to all destinations (not round-robin)
+4. **Order doesn't matter:** Gandi processes most specific match first
+5. **Check spam folders:** Forwarded emails may be filtered by recipient's spam filter
+
+### Example: Complete Domain Email Setup
+
+```bash
+# 1. Set up MX records (if not already done)
+node add-dns-record.js example.com @ MX "10 spool.mail.gandi.net."
+node add-dns-record.js example.com @ MX "50 fb.mail.gandi.net."
+
+# 2. Create specific forwards
+node add-email-forward.js example.com hello you@personal.com
+node add-email-forward.js example.com support team@example.com
+node add-email-forward.js example.com sales sales-team@example.com
+
+# 3. Set up catch-all for everything else
+node add-email-forward.js example.com @ admin@example.com
+
+# 4. List all forwards to verify
+node list-email-forwards.js example.com
+```
+
 ## Helper Scripts
 
 All scripts are in `gandi-skill/scripts/`:
 
+### Authentication & Setup
 | Script | Purpose |
 |--------|---------|
 | `test-auth.js` | Verify authentication works |
 | `setup-contact.js` | Save contact info for domain registration (run once) |
 | `view-contact.js` | View saved contact information |
 | `delete-contact.js` | Delete saved contact (with optional --force) |
+
+### Domain & DNS Viewing
+| Script | Purpose |
+|--------|---------|
 | `list-domains.js` | Show all domains in account |
 | `list-dns.js <domain>` | Show DNS records for domain |
 | `check-domain.js <domain>` | Check single domain availability + pricing |
 | `suggest-domains.js <name>` | Smart domain suggestions with variations |
 | `check-ssl.js` | Check SSL certificate status for all domains |
+
+### DNS Modification (Phase 2)
+| Script | Purpose |
+|--------|---------|
+| `add-dns-record.js <domain> <name> <type> <value> [ttl]` | Add or update a DNS record |
+| `delete-dns-record.js <domain> <name> <type> [--force]` | Delete a DNS record |
+| `update-dns-bulk.js <domain> <records.json> [--no-snapshot] [--force]` | Bulk update all DNS records |
+| `list-snapshots.js <domain>` | List DNS zone snapshots |
+| `create-snapshot.js <domain> [name]` | Create a DNS zone snapshot |
+| `restore-snapshot.js <domain> <snapshot-id> [--force]` | Restore DNS zone from snapshot |
+
+### Email Forwarding (Phase 2)
+| Script | Purpose |
+|--------|---------|
+| `list-email-forwards.js <domain>` | List all email forwards for a domain |
+| `add-email-forward.js <domain> <mailbox> <destination> [dest2...]` | Create email forward (use @ for catch-all) |
+| `update-email-forward.js <domain> <mailbox> <destination> [dest2...]` | Update email forward destinations |
+| `delete-email-forward.js <domain> <mailbox> [--force]` | Delete email forward |
+
+### Core Library
+| Script | Purpose |
+|--------|---------|
 | `gandi-api.js` | Core API client (importable) |
 
 ## Configuration
