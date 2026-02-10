@@ -1,7 +1,7 @@
 ---
 name: gandi
 description: "Manage Gandi domains, DNS, email, and SSL certificates via the Gandi API"
-metadata: {"openclaw":{"disable-model-invocation":true,"capabilities":["dns-modification","email-management","domain-registration","destructive-operations"]}}
+metadata: {"openclaw":{"disable-model-invocation":true,"capabilities":["dns-modification","email-management","domain-registration","destructive-operations"],"credentials":{"type":"file","location":"~/.config/gandi/api_token","description":"Gandi Personal Access Token (PAT)","permissions":600}}}
 ---
 
 # Gandi Domain Registrar Skill
@@ -71,18 +71,31 @@ Comprehensive Gandi domain registrar integration for Moltbot.
 
 ### Step 1: Create Personal Access Token
 
+**⚠️ Security Recommendation:** Use the **minimum required scopes** for your use case.
+
 1. Go to [Gandi Admin → Personal Access Tokens](https://admin.gandi.net/organizations/account/pat)
 2. Click **"Create a token"**
 3. Select your organization
 4. Choose scopes:
+   
+   **Read-Only (Recommended for viewing only):**
    - ✅ Domain: read (required for listing domains)
    - ✅ LiveDNS: read (required for viewing DNS records)
-   - ✅ LiveDNS: write (**required for Phase 2 - DNS modification**)
    - ✅ Email: read (required for viewing email forwards)
-   - ✅ Email: write (**required for Phase 2 - email forwarding management**)
+   
+   **Write Access (Required for modifications - use with caution):**
+   - ⚠️ LiveDNS: write (enables DNS modification, deletion, bulk operations)
+   - ⚠️ Email: write (enables email forward creation, updates, deletions)
+
 5. Copy the token (you won't see it again!)
 
-**Note:** If you only need read-only access (Phase 1), you can skip the write permissions.
+**Security Best Practices:**
+- Create separate tokens for read-only vs. write operations
+- Use read-only tokens for routine checks/monitoring
+- Only use write tokens when actively making changes
+- Rotate tokens regularly (every 90 days recommended)
+- Delete unused tokens immediately
+- **Never share or commit tokens to version control**
 
 ### Step 2: Store Token
 
