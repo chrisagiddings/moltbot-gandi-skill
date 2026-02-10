@@ -1,7 +1,7 @@
 ---
 name: gandi
 description: "Manage Gandi domains, DNS, email, and SSL certificates via the Gandi API"
-metadata: {"openclaw":{"disable-model-invocation":true,"capabilities":["dns-modification","email-management","domain-registration","destructive-operations"],"credentials":{"type":"file","location":"~/.config/gandi/api_token","description":"Gandi Personal Access Token (PAT)","permissions":600}}}
+metadata: {"openclaw":{"disable-model-invocation":true,"capabilities":["dns-modification","email-management","domain-registration","destructive-operations"],"credentials":{"type":"file","location":"~/.config/gandi/api_token","description":"Gandi Personal Access Token (PAT)","permissions":600},"requires":{"bins":["node","npm"]}}}
 ---
 
 # Gandi Domain Registrar Skill
@@ -110,7 +110,30 @@ echo "YOUR_PERSONAL_ACCESS_TOKEN" > ~/.config/gandi/api_token
 chmod 600 ~/.config/gandi/api_token
 ```
 
-### Step 3: Test Authentication
+### Step 3: Install Dependencies
+
+**Required:** Node.js >= 18.0.0
+
+```bash
+cd gandi-skill/scripts
+
+# Install npm dependencies
+npm install
+
+# Verify installation
+npm list --depth=0
+```
+
+**Expected packages:**
+- axios (HTTP client for Gandi API)
+- Any other dependencies listed in package.json
+
+**Troubleshooting:**
+- If `node` or `npm` not found: Install Node.js from [nodejs.org](https://nodejs.org/)
+- If permission errors: Don't use `sudo` - fix npm permissions or use nvm
+- If package errors: Delete `node_modules/` and `package-lock.json`, then `npm install` again
+
+### Step 4: Test Authentication
 
 ```bash
 cd gandi-skill/scripts
@@ -128,7 +151,7 @@ Your organizations:
 🎉 You're ready to use the Gandi skill!
 ```
 
-### Step 4: Setup Contact Information (Optional, for Domain Registration)
+### Step 5: Setup Contact Information (Optional, for Domain Registration)
 
 If you plan to register domains, save your contact information once for reuse:
 
