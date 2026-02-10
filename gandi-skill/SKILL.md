@@ -35,6 +35,13 @@ Comprehensive Gandi domain registrar integration for Moltbot.
 - `list-domains.js`, `list-dns.js`, `list-snapshots.js`
 - `list-email-forwards.js`, `check-domain.js`, `check-ssl.js`
 
+📖 **For complete script documentation:** See [SCRIPTS.md](SCRIPTS.md) for detailed information about:
+- What each script does
+- Network operations and API calls
+- Security implications
+- Undo/recovery procedures
+- Audit workflow recommendations
+
 ## Current Capabilities
 
 ### Phase 1 (Complete)
