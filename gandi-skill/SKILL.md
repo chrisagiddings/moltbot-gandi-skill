@@ -1,7 +1,7 @@
 ---
 name: gandi
 description: "Manage Gandi domains, DNS, email, and SSL certificates via the Gandi API"
-metadata: {"openclaw":{"disable-model-invocation":true}}
+metadata: {"openclaw":{"disable-model-invocation":true,"capabilities":["dns-modification","email-management","domain-registration","destructive-operations"]}}
 ---
 
 # Gandi Domain Registrar Skill
@@ -9,6 +9,31 @@ metadata: {"openclaw":{"disable-model-invocation":true}}
 Comprehensive Gandi domain registrar integration for Moltbot.
 
 **Status:** ✅ Phase 2 Complete - DNS modification & snapshots functional
+
+## ⚠️ Security Warning
+
+**This skill can perform DESTRUCTIVE operations on your Gandi account:**
+
+- **DNS Modification:** Add, update, or delete DNS records (can break websites/email)
+- **Email Management:** Create, modify, or delete email forwards (can intercept emails)
+- **Domain Registration:** Register domains (creates financial transactions)
+- **Bulk Operations:** Replace all DNS records at once (cannot be undone except via snapshots)
+
+**Before running ANY script:**
+1. Review the script code to understand what it does
+2. Create DNS snapshots before bulk changes (`create-snapshot.js`)
+3. Use read-only Personal Access Tokens where possible
+4. Test on non-production domains first
+5. Understand that some operations cannot be undone
+
+**Destructive scripts** (⚠️ modify or delete data):
+- `add-dns-record.js`, `delete-dns-record.js`, `update-dns-bulk.js`
+- `add-email-forward.js`, `update-email-forward.js`, `delete-email-forward.js`
+- `restore-snapshot.js` (replaces current DNS)
+
+**Read-only scripts** (✅ safe, no modifications):
+- `list-domains.js`, `list-dns.js`, `list-snapshots.js`
+- `list-email-forwards.js`, `check-domain.js`, `check-ssl.js`
 
 ## Current Capabilities
 
