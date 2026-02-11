@@ -1,6 +1,6 @@
 {
   "name": "gandi",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Manage Gandi domains, DNS, email, and SSL certificates via the Gandi API",
   "author": "Chris Giddings",
   "license": "MIT",
