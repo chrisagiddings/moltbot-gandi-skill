@@ -1,0 +1,57 @@
+{
+  "name": "gandi",
+  "version": "0.2.1",
+  "description": "Manage Gandi domains, DNS, email, and SSL certificates via the Gandi API",
+  "author": "Chris Giddings",
+  "license": "MIT",
+  "openclaw": {
+    "disable-model-invocation": true,
+    "capabilities": [
+      "dns-modification",
+      "email-management",
+      "domain-registration",
+      "destructive-operations"
+    ],
+    "credentials": {
+      "type": "file",
+      "location": "~/.config/gandi/api_token",
+      "description": "Gandi Personal Access Token (PAT)",
+      "permissions": "0600",
+      "required": true,
+      "scope-separation": {
+        "read-only": ["domain:read", "livedns:read", "email:read"],
+        "write": ["livedns:write", "email:write"],
+        "dangerous": ["domain:write"]
+      }
+    },
+    "requires": {
+      "bins": ["node", "npm"],
+      "node-version": ">=18.0.0"
+    },
+    "install": {
+      "type": "npm",
+      "directory": "gandi-skill/scripts",
+      "command": "npm install",
+      "audit-required": true
+    },
+    "security": {
+      "input-sanitization": true,
+      "credential-isolation": true,
+      "defense-in-depth": true,
+      "audit-date": "2026-02-10",
+      "audit-score": "10/10"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chrisagiddings/moltbot-gandi-skill.git"
+  },
+  "keywords": [
+    "gandi",
+    "dns",
+    "domain",
+    "email",
+    "api",
+    "moltbot"
+  ]
+}

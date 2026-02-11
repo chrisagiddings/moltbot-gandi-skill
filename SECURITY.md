@@ -104,9 +104,88 @@ All operations are classified for safety:
 
 1. **Protect Your API Token**
    - Never commit to version control
-   - Use minimal required scopes
+   - Use minimal required scopes (see Token Scope Separation below)
    - Rotate every 90 days
    - Use separate tokens for development/production
+   - **Use separate read-only and write tokens** (highly recommended)
+
+#### Token Scope Separation
+
+**RECOMMENDED: Use separate tokens for different operations**
+
+**Read-Only Token** (safe operations):
+```
+Scopes: domain:read, livedns:read, email:read
+Use for:
+- Listing domains (list-domains.js)
+- Viewing DNS records (list-dns.js)
+- Checking availability (check-domain.js)
+- Viewing email forwards (list-email-forwards.js)
+- Viewing snapshots (list-snapshots.js)
+```
+
+**Write Token** (destructive operations):
+```
+Scopes: domain:read, livedns:read, livedns:write, email:read, email:write
+Use for:
+- Adding/updating DNS records (add-dns-record.js)
+- Deleting DNS records (delete-dns-record.js)
+- Bulk DNS updates (update-dns-bulk.js)
+- Email forward management
+- Creating/restoring snapshots
+```
+
+**High-Risk Token** (domain registration - future):
+```
+Scopes: domain:read, domain:write, livedns:read, livedns:write
+Use for:
+- Domain registration (costs money)
+- Domain transfers
+- Domain renewal
+```
+
+**How to use multiple tokens:**
+
+1. Store tokens in separate files:
+   ```bash
+   # Read-only token (default)
+   echo "YOUR_READ_TOKEN" > ~/.config/gandi/api_token
+   chmod 600 ~/.config/gandi/api_token
+   
+   # Write token (for destructive ops)
+   echo "YOUR_WRITE_TOKEN" > ~/.config/gandi/api_token_write
+   chmod 600 ~/.config/gandi/api_token_write
+   ```
+
+2. Temporarily switch tokens for write operations:
+   ```bash
+   # Backup read-only token
+   mv ~/.config/gandi/api_token ~/.config/gandi/api_token_read
+   
+   # Use write token
+   mv ~/.config/gandi/api_token_write ~/.config/gandi/api_token
+   
+   # Perform write operation
+   node add-dns-record.js example.com test A 1.1.1.1
+   
+   # Restore read-only token
+   mv ~/.config/gandi/api_token ~/.config/gandi/api_token_write
+   mv ~/.config/gandi/api_token_read ~/.config/gandi/api_token
+   ```
+
+3. Or use environment variable override:
+   ```bash
+   # Export write token temporarily
+   export GANDI_API_TOKEN="YOUR_WRITE_TOKEN"
+   node add-dns-record.js example.com test A 1.1.1.1
+   unset GANDI_API_TOKEN
+   ```
+
+**Benefits of token separation:**
+- ✅ Limits blast radius if token is compromised
+- ✅ Forces intentional action for destructive operations
+- ✅ Audit trail (different tokens show different API usage)
+- ✅ Can revoke write access without breaking read operations
 
 2. **Test on Sandbox First**
    - Create sandbox account: https://admin.sandbox.gandi.net
@@ -188,12 +267,154 @@ All operations are classified for safety:
 
 ---
 
+## Dependency Security
+
+### NPM Audit
+
+**Before installation:**
+
+1. **Inspect package.json:**
+   ```bash
+   cd gandi-skill/scripts
+   cat package.json
+   ```
+   
+   Current state: **ZERO dependencies** ✅
+   - Uses only Node.js built-in modules
+   - No third-party packages
+   - No supply chain risk
+
+2. **Run npm audit (if dependencies exist in future):**
+   ```bash
+   npm audit
+   npm audit fix  # Only if you trust the fixes
+   ```
+
+3. **Check for suspicious scripts:**
+   ```bash
+   # Verify no postinstall or preinstall hooks
+   grep -E "(pre|post)install" package.json
+   ```
+
+**Current package.json:**
+```json
+{
+  "name": "gandi-skill-scripts",
+  "version": "0.1.0",
+  "description": "Helper scripts for Gandi API integration",
+  "type": "module",
+  "scripts": {
+    "test": "node test-auth.js"
+  },
+  "dependencies": {}
+}
+```
+
+**Security notes:**
+- ✅ No dependencies = no npm supply chain risk
+- ✅ No install hooks = no arbitrary code execution during install
+- ✅ ES modules only (`"type": "module"`)
+- ✅ Single test script (safe to review)
+
+**If dependencies are added in future updates:**
+- 🔍 Review each dependency on npm
+- 🔍 Check download counts and maintenance status
+- 🔍 Run `npm audit` before installing
+- 🔍 Verify no suspicious install hooks
+- 🔍 Consider using `npm ci` for reproducible installs
+
+---
+
+## Installation Security
+
+**CRITICAL: Follow this process before using the skill**
+
+### 1. Clone and Inspect
+```bash
+# Clone the repository
+git clone https://github.com/chrisagiddings/moltbot-gandi-skill.git
+cd moltbot-gandi-skill
+
+# Review the code before running anything
+ls -la
+cat SECURITY.md  # Read this document
+cat README.md    # Understand what it does
+```
+
+### 2. Verify Metadata
+```bash
+# Check _meta.json exists and declares requirements correctly
+cat _meta.json
+
+# Should show:
+# - disable-model-invocation: true
+# - credentials required: ~/.config/gandi/api_token
+# - requires bins: node, npm
+```
+
+### 3. Audit Dependencies
+```bash
+cd gandi-skill/scripts
+
+# Inspect package.json
+cat package.json
+
+# Run npm audit (currently passes - zero dependencies)
+npm audit
+
+# Install dependencies (currently none)
+npm install
+```
+
+### 4. Test with Read-Only Token First
+```bash
+# Create Gandi PAT with ONLY read scopes:
+# domain:read, livedns:read, email:read
+
+echo "YOUR_READ_ONLY_TOKEN" > ~/.config/gandi/api_token
+chmod 600 ~/.config/gandi/api_token
+
+# Test authentication
+node test-auth.js
+
+# Test safe operations
+node list-domains.js
+node list-dns.js example.com
+```
+
+### 5. Test on Sandbox Environment
+```bash
+# Use Gandi's sandbox (https://admin.sandbox.gandi.net)
+echo "YOUR_SANDBOX_TOKEN" > ~/.config/gandi/api_token
+echo "https://api.sandbox.gandi.net" > ~/.config/gandi/api_url
+
+# Test write operations safely
+node add-dns-record.js sandbox-test.com test A 1.2.3.4
+```
+
+### 6. Production Use (Only After Testing)
+```bash
+# Switch to production token with write scopes
+echo "YOUR_PRODUCTION_WRITE_TOKEN" > ~/.config/gandi/api_token
+echo "https://api.gandi.net" > ~/.config/gandi/api_url
+
+# Use on production domains
+node add-dns-record.js production.com www A 192.168.1.1
+```
+
+---
+
 ## Security Checklist
 
 **Before first use:**
+- [ ] Reviewed SECURITY.md and README.md
+- [ ] Inspected _meta.json for correct metadata declarations
+- [ ] Verified package.json has zero dependencies (or audited them)
+- [ ] Run npm audit with zero vulnerabilities
 - [ ] API token stored securely (NOT in code)
 - [ ] Config files have secure permissions (chmod 600)
-- [ ] Test on sandbox site, not production
+- [ ] Tested with read-only token first
+- [ ] Tested on sandbox site, not production
 - [ ] Understand operation classifications (safe/destructive)
 
 **Regular maintenance:**

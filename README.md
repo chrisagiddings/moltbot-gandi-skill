@@ -1,6 +1,7 @@
 ---
 name: gandi
 description: "Manage Gandi domains, DNS, email, and SSL certificates via the Gandi API"
+metadata: {"openclaw":{"disable-model-invocation":true,"capabilities":["dns-modification","email-management","domain-registration","destructive-operations"],"credentials":{"type":"file","location":"~/.config/gandi/api_token","description":"Gandi Personal Access Token (PAT)","permissions":600,"required":true},"requires":{"bins":["node","npm"]}}}
 ---
 
 # Gandi Domain Registrar Skill
@@ -8,6 +9,42 @@ description: "Manage Gandi domains, DNS, email, and SSL certificates via the Gan
 Comprehensive Gandi domain registrar integration for Moltbot.
 
 **Status:** ✅ Phase 2 Complete - DNS modification & snapshots functional
+
+---
+
+## ⚠️ IMPORTANT: Security & Installation Notes
+
+**This skill contains runnable scripts that can modify/delete DNS and email settings.**
+
+**Before installing or using:**
+
+1. ✅ **Review [SECURITY.md](SECURITY.md)** - Complete security documentation
+2. ✅ **Inspect the code** - This can modify production infrastructure
+3. ✅ **Verify metadata** - Check `_meta.json` declares requirements correctly
+4. ✅ **Audit dependencies** - Run `npm audit` (currently: zero dependencies ✅)
+5. ✅ **Test with read-only token first** - Limit blast radius
+6. ✅ **Use sandbox environment** - Test on https://admin.sandbox.gandi.net
+7. ✅ **Separate read/write tokens** - Recommended for production
+
+**Requirements:**
+- Node.js ≥18.0.0
+- npm (for installation)
+- Gandi Personal Access Token (stored in `~/.config/gandi/api_token` with 0600 permissions)
+
+**Metadata Declarations:**
+- ✅ `disable-model-invocation: true` - Model cannot trigger operations autonomously
+- ✅ Capabilities declared: DNS modification, email management, destructive operations
+- ✅ Credentials declared: File-based PAT with secure permissions
+- ✅ Binary requirements: node, npm
+
+**Dependencies:** Zero ✅
+- Uses only Node.js built-in modules (https, fs, readline)
+- No third-party packages
+- No supply chain risk
+
+See [SECURITY.md](SECURITY.md) for complete installation security process.
+
+---
 
 ## Current Capabilities
 
