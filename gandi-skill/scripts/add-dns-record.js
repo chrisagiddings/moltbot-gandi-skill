@@ -9,12 +9,19 @@
  *   node add-dns-record.js example.com @ MX "10 mail.example.com." 10800
  */
 
-import { createDnsRecord, validateRecordValue, isValidTTL, getDnsRecord } from './gandi-api.js';
+import { 
+  createDnsRecord, 
+  validateRecordValue, 
+  getDnsRecord,
+  sanitizeDomain,
+  sanitizeRecordName,
+  sanitizeTTL
+} from './gandi-api.js';
 
-const [,, domain, name, type, ...rest] = process.argv;
+const [,, rawDomain, rawName, type, ...rest] = process.argv;
 
 // Check required arguments
-if (!domain || !name || !type || rest.length === 0) {
+if (!rawDomain || !rawName || !type || rest.length === 0) {
   console.error('❌ Usage: node add-dns-record.js <domain> <name> <type> <value> [ttl]');
   console.error('');
   console.error('Examples:');
@@ -29,16 +36,31 @@ if (!domain || !name || !type || rest.length === 0) {
   process.exit(1);
 }
 
+// Sanitize inputs for security
+let domain, name, ttl;
+try {
+  domain = sanitizeDomain(rawDomain);
+  name = sanitizeRecordName(rawName);
+} catch (error) {
+  console.error(`❌ Invalid input: ${error.message}`);
+  process.exit(1);
+}
+
 // Parse TTL (last argument might be TTL)
 let value;
-let ttl = 10800; // Default 3 hours
+ttl = 10800; // Default 3 hours
 
 if (rest.length > 1) {
   // Check if last arg is a number (TTL)
   const lastArg = rest[rest.length - 1];
-  if (!isNaN(parseInt(lastArg)) && isValidTTL(parseInt(lastArg))) {
-    ttl = parseInt(lastArg);
-    value = rest.slice(0, -1).join(' ');
+  if (!isNaN(parseInt(lastArg))) {
+    try {
+      ttl = sanitizeTTL(parseInt(lastArg));
+      value = rest.slice(0, -1).join(' ');
+    } catch (error) {
+      console.error(`❌ Invalid TTL: ${error.message}`);
+      process.exit(1);
+    }
   } else {
     value = rest.join(' ');
   }

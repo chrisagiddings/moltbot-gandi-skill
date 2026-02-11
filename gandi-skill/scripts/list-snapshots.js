@@ -5,15 +5,24 @@
  * Usage: node list-snapshots.js <domain>
  */
 
-import { listSnapshots } from './gandi-api.js';
+import { listSnapshots, sanitizeDomain } from './gandi-api.js';
 
-const [,, domain] = process.argv;
+const [,, rawDomain] = process.argv;
 
-if (!domain) {
+if (!rawDomain) {
   console.error('❌ Usage: node list-snapshots.js <domain>');
   console.error('');
   console.error('Example:');
   console.error('  node list-snapshots.js example.com');
+  process.exit(1);
+}
+
+// Sanitize domain input for security
+let domain;
+try {
+  domain = sanitizeDomain(rawDomain);
+} catch (error) {
+  console.error(`❌ Invalid domain: ${error.message}`);
   process.exit(1);
 }
 

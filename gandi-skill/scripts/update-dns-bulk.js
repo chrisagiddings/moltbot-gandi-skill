@@ -22,16 +22,24 @@
  * ]
  */
 
-import { replaceDnsRecords, listDnsRecords, createSnapshot, validateRecordValue } from './gandi-api.js';
+import { 
+  replaceDnsRecords, 
+  listDnsRecords, 
+  createSnapshot, 
+  validateRecordValue,
+  sanitizeDomain,
+  sanitizeRecordName,
+  sanitizeTTL
+} from './gandi-api.js';
 import fs from 'fs';
 import readline from 'readline';
 
 const args = process.argv.slice(2);
 const skipSnapshot = args.includes('--no-snapshot');
 const force = args.includes('--force');
-const [domain, jsonFile] = args.filter(arg => !arg.startsWith('--'));
+const [rawDomain, jsonFile] = args.filter(arg => !arg.startsWith('--'));
 
-if (!domain) {
+if (!rawDomain) {
   console.error('❌ Usage: node update-dns-bulk.js <domain> [records.json] [--no-snapshot] [--force]');
   console.error('');
   console.error('Examples:');
@@ -46,6 +54,15 @@ if (!domain) {
   console.error('⚠️  WARNING: This replaces ALL DNS records for the domain!');
   console.error('   Records not in the JSON file will be deleted.');
   console.error('   Use --no-snapshot with caution.');
+  process.exit(1);
+}
+
+// Sanitize domain input for security
+let domain;
+try {
+  domain = sanitizeDomain(rawDomain);
+} catch (error) {
+  console.error(`❌ Invalid domain: ${error.message}`);
   process.exit(1);
 }
 
@@ -94,10 +111,19 @@ function validateRecords(records) {
   records.forEach((record, index) => {
     if (!record.rrset_name) {
       errors.push(`Record ${index + 1}: Missing rrset_name`);
+    } else {
+      // Sanitize record name for security
+      try {
+        record.rrset_name = sanitizeRecordName(record.rrset_name);
+      } catch (error) {
+        errors.push(`Record ${index + 1}: Invalid rrset_name - ${error.message}`);
+      }
     }
+    
     if (!record.rrset_type) {
       errors.push(`Record ${index + 1}: Missing rrset_type`);
     }
+    
     if (!record.rrset_values || !Array.isArray(record.rrset_values) || record.rrset_values.length === 0) {
       errors.push(`Record ${index + 1}: Missing or empty rrset_values array`);
     }
@@ -112,11 +138,12 @@ function validateRecords(records) {
       });
     }
     
-    // Validate TTL if provided
+    // Validate and sanitize TTL if provided
     if (record.rrset_ttl !== undefined) {
-      const ttl = parseInt(record.rrset_ttl, 10);
-      if (isNaN(ttl) || ttl < 300 || ttl > 2592000) {
-        errors.push(`Record ${index + 1}: TTL must be between 300 and 2592000 seconds`);
+      try {
+        record.rrset_ttl = sanitizeTTL(record.rrset_ttl);
+      } catch (error) {
+        errors.push(`Record ${index + 1}: ${error.message}`);
       }
     }
   });

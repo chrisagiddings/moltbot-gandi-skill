@@ -5,15 +5,24 @@
  * Usage: node list-email-forwards.js <domain>
  */
 
-import { listEmailForwards } from './gandi-api.js';
+import { listEmailForwards, sanitizeDomain } from './gandi-api.js';
 
-const [,, domain] = process.argv;
+const [,, rawDomain] = process.argv;
 
-if (!domain) {
+if (!rawDomain) {
   console.error('❌ Usage: node list-email-forwards.js <domain>');
   console.error('');
   console.error('Example:');
   console.error('  node list-email-forwards.js example.com');
+  process.exit(1);
+}
+
+// Sanitize domain input for security
+let domain;
+try {
+  domain = sanitizeDomain(rawDomain);
+} catch (error) {
+  console.error(`❌ Invalid domain: ${error.message}`);
   process.exit(1);
 }
 

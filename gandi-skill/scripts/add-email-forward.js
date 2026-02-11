@@ -9,11 +9,11 @@
  *   node add-email-forward.js example.com @ catchall@example.com  # Catch-all
  */
 
-import { createEmailForward, getEmailForward } from './gandi-api.js';
+import { createEmailForward, getEmailForward, sanitizeDomain, sanitizeRecordName } from './gandi-api.js';
 
-const [,, domain, mailbox, ...destinations] = process.argv;
+const [,, rawDomain, rawMailbox, ...destinations] = process.argv;
 
-if (!domain || !mailbox || destinations.length === 0) {
+if (!rawDomain || !rawMailbox || destinations.length === 0) {
   console.error('❌ Usage: node add-email-forward.js <domain> <mailbox> <destination> [destination2]...');
   console.error('');
   console.error('Examples:');
@@ -28,6 +28,16 @@ if (!domain || !mailbox || destinations.length === 0) {
   console.error('Destinations:');
   console.error('  - One or more email addresses to forward to');
   console.error('  - Multiple destinations = email sent to all');
+  process.exit(1);
+}
+
+// Sanitize inputs for security
+let domain, mailbox;
+try {
+  domain = sanitizeDomain(rawDomain);
+  mailbox = sanitizeRecordName(rawMailbox); // Mailbox names follow same rules as DNS records
+} catch (error) {
+  console.error(`❌ Invalid input: ${error.message}`);
   process.exit(1);
 }
 

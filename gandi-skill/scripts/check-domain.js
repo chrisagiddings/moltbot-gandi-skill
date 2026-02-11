@@ -9,18 +9,27 @@
  *   node check-domain.js example  (will add .com if no TLD)
  */
 
-import { checkAvailability } from './gandi-api.js';
+import { checkAvailability, sanitizeDomain } from './gandi-api.js';
 
-const domain = process.argv[2];
+const rawDomain = process.argv[2];
 
-if (!domain) {
+if (!rawDomain) {
   console.error('Usage: node check-domain.js <domain>');
   console.error('Example: node check-domain.js example.com');
   process.exit(1);
 }
 
 // Add .com if no TLD provided
-const domainToCheck = domain.includes('.') ? domain : `${domain}.com`;
+const domainWithTld = rawDomain.includes('.') ? rawDomain : `${rawDomain}.com`;
+
+// Sanitize domain input for security
+let domainToCheck;
+try {
+  domainToCheck = sanitizeDomain(domainWithTld);
+} catch (error) {
+  console.error(`❌ Invalid domain: ${error.message}`);
+  process.exit(1);
+}
 
 console.log(`🔍 Checking availability for: ${domainToCheck}\n`);
 

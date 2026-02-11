@@ -7,13 +7,22 @@
  * Usage: node list-dns.js <domain>
  */
 
-import { listDnsRecords, getDomain } from './gandi-api.js';
+import { listDnsRecords, getDomain, sanitizeDomain } from './gandi-api.js';
 
-const domain = process.argv[2];
+const rawDomain = process.argv[2];
 
-if (!domain) {
+if (!rawDomain) {
   console.log('Usage: node list-dns.js <domain>');
   console.log('Example: node list-dns.js example.com');
+  process.exit(1);
+}
+
+// Sanitize domain input for security
+let domain;
+try {
+  domain = sanitizeDomain(rawDomain);
+} catch (error) {
+  console.error(`❌ Invalid domain: ${error.message}`);
   process.exit(1);
 }
 

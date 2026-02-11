@@ -8,11 +8,11 @@
  *   node update-email-forward.js example.com contact support@example.com sales@example.com
  */
 
-import { updateEmailForward, getEmailForward } from './gandi-api.js';
+import { updateEmailForward, getEmailForward, sanitizeDomain, sanitizeRecordName } from './gandi-api.js';
 
-const [,, domain, mailbox, ...destinations] = process.argv;
+const [,, rawDomain, rawMailbox, ...destinations] = process.argv;
 
-if (!domain || !mailbox || destinations.length === 0) {
+if (!rawDomain || !rawMailbox || destinations.length === 0) {
   console.error('❌ Usage: node update-email-forward.js <domain> <mailbox> <destination> [destination2]...');
   console.error('');
   console.error('Examples:');
@@ -20,6 +20,16 @@ if (!domain || !mailbox || destinations.length === 0) {
   console.error('  node update-email-forward.js example.com contact support@example.com sales@example.com');
   console.error('');
   console.error('This replaces all existing destinations with the new ones.');
+  process.exit(1);
+}
+
+// Sanitize inputs for security
+let domain, mailbox;
+try {
+  domain = sanitizeDomain(rawDomain);
+  mailbox = sanitizeRecordName(rawMailbox);
+} catch (error) {
+  console.error(`❌ Invalid input: ${error.message}`);
   process.exit(1);
 }
 

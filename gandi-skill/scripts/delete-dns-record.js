@@ -8,15 +8,15 @@
  *   node delete-dns-record.js example.com test CNAME --force
  */
 
-import { deleteDnsRecord, getDnsRecord } from './gandi-api.js';
+import { deleteDnsRecord, getDnsRecord, sanitizeDomain, sanitizeRecordName } from './gandi-api.js';
 import readline from 'readline';
 
 const args = process.argv.slice(2);
 const force = args.includes('--force');
-const [domain, name, type] = args.filter(arg => !arg.startsWith('--'));
+const [rawDomain, rawName, type] = args.filter(arg => !arg.startsWith('--'));
 
 // Check required arguments
-if (!domain || !name || !type) {
+if (!rawDomain || !rawName || !type) {
   console.error('❌ Usage: node delete-dns-record.js <domain> <name> <type> [--force]');
   console.error('');
   console.error('Examples:');
@@ -25,6 +25,16 @@ if (!domain || !name || !type) {
   console.error('');
   console.error('Options:');
   console.error('  --force    Skip confirmation prompt');
+  process.exit(1);
+}
+
+// Sanitize inputs for security
+let domain, name;
+try {
+  domain = sanitizeDomain(rawDomain);
+  name = sanitizeRecordName(rawName);
+} catch (error) {
+  console.error(`❌ Invalid input: ${error.message}`);
   process.exit(1);
 }
 
