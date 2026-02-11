@@ -25,9 +25,11 @@
       }
     },
     "requires": {
+      "env": ["GANDI_API_TOKEN"],
       "bins": ["node", "npm"],
       "node-version": ">=18.0.0"
     },
+    "primaryEnv": "GANDI_API_TOKEN",
     "install": {
       "type": "npm",
       "directory": "gandi-skill/scripts",
