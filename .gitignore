@@ -4,7 +4,10 @@ package-lock.json
 
 # Environment
 .env
+.env.*
 .env.local
+.env.production
+.env.development
 
 # Credentials (NEVER commit these!)
 *.key
@@ -13,25 +16,74 @@ package-lock.json
 api_key
 api_token
 api_secret
+api_url
 contact.json
 profiles.json
 tokens/
+*.credentials
+
+# Config Overrides
+config.local.json
+*.override.json
+*.local.json
+
+# User Data (Defense-in-depth)
+user-data/
+snapshots/
+backups/
+
+# Backups
+*.bak
+*.backup
+*~
+
+# Debug/Test Data
+test-data/
+debug-output/
+*.dump
+*.debug
 
 # OS files
 .DS_Store
 Thumbs.db
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
 
 # Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+*.swn
 *~
+.project
+.classpath
+.settings/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
 # Test files
 test-output/
-*.log
+coverage/
+.nyc_output/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
 # Temp files
 tmp/
 temp/
+*.tmp
+*.temp

@@ -769,14 +769,49 @@ const record = await getDnsRecord('example.com', '@', 'A');
 const available = await checkAvailability(['example.com', 'example.net']);
 ```
 
-## Security
+## Privacy & Security
+
+**What this skill stores locally:**
+- ✅ API token at `~/.config/gandi/api_token` (with secure permissions 0600)
+- ✅ Contact info at `~/.config/gandi/contact.json` (optional, with privacy preferences)
+- ✅ API URL override at `~/.config/gandi/api_url` (optional, for sandbox testing)
+- ❌ NO user-generated content in repository
+- ❌ NO credentials in code
+
+**What this skill transmits:**
+- ✅ API requests to Gandi API only (HTTPS)
+- ❌ NO third-party API calls
+- ❌ NO telemetry or analytics
+- ❌ NO external logging
+
+**Security features:**
+- ✅ Credentials never logged or transmitted to third parties
+- ✅ HTTPS-only communication with Gandi API
+- ✅ Input sanitization (domain names, DNS records, TTL values)
+- ✅ Rate limiting (respects Gandi's 1000 req/min limit)
+- ✅ Operation classification (safe vs. destructive)
+- ✅ `.gitignore` prevents credential commits
+- ✅ Redacted logging for sensitive contact information
+
+**Best practices:**
+- 🔒 Store API tokens securely (`~/.config/gandi/`)
+- 🔄 Rotate API tokens every 90 days
+- 🧪 Test on sandbox before production
+- 📝 Review changes before destructive operations
+- 🔐 Enable 2FA on Gandi account
+- 🚫 Never commit credentials to version control
+
+**For detailed security information:**
+- See [SECURITY.md](SECURITY.md) for security policy and incident response
+- See [gandi-skill/SKILL.md](gandi-skill/SKILL.md) for operation classifications
+- Report security issues privately to repository owner (NOT via GitHub issues)
 
 ### Token Storage
 
 ✅ **DO:**
 - Store at `~/.config/gandi/api_token`
 - Use 600 permissions (owner read-only)
-- Rotate tokens regularly
+- Rotate tokens every 90 days
 - Use minimal required scopes
 
 ❌ **DON'T:**
@@ -787,15 +822,20 @@ const available = await checkAvailability(['example.com', 'example.net']);
 
 ### Token Scopes
 
-**Phase 1 (current):**
+**Phase 1:**
 - Domain: read
 - LiveDNS: read
 
-**Phase 2+ (future):**
-- Domain: read, write (for registration, renewal)
+**Phase 2 (current):**
+- Domain: read
 - LiveDNS: read, write (for DNS modifications)
+- Email: read, write (for email forwarding)
+
+**Phase 3+ (future):**
+- Domain: read, write (for registration, renewal, transfers)
 - Certificate: read (optional, for SSL certs)
-- Email: read, write (optional, for email config)
+
+**Security tip:** Only request the scopes you need. You can create multiple tokens with different scopes for different purposes.
 
 ## Architecture
 

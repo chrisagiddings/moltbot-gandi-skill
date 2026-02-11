@@ -861,6 +861,184 @@ export function isValidTTL(ttl) {
   return !isNaN(num) && num >= 300 && num <= 2592000;
 }
 
+// ========================================
+// Input Sanitization Functions
+// ========================================
+
+/**
+ * Sanitize domain name
+ * Prevents injection and validates format
+ * @param {string} domain - Raw domain name
+ * @returns {string} Sanitized domain name
+ * @throws {Error} If domain is invalid
+ */
+export function sanitizeDomain(domain) {
+  if (!domain || typeof domain !== 'string') {
+    throw new Error('Domain name must be a string');
+  }
+  
+  // Remove whitespace and convert to lowercase
+  domain = domain.trim().toLowerCase();
+  
+  // Remove trailing dot if present (we'll add it for FQDN when needed)
+  domain = domain.replace(/\.$/, '');
+  
+  // Check length limits (RFC 1035)
+  if (domain.length > 253) {
+    throw new Error(`Domain name too long: ${domain.length} characters (max 253)`);
+  }
+  
+  if (domain.length === 0) {
+    throw new Error('Domain name cannot be empty');
+  }
+  
+  // Validate domain format (RFC 1035: letters, digits, hyphens, dots)
+  const domainRegex = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+  if (!domainRegex.test(domain)) {
+    throw new Error(`Invalid domain format: "${domain}"`);
+  }
+  
+  // Prevent path traversal attempts
+  if (domain.includes('..')) {
+    throw new Error(`Invalid domain (path traversal attempt): "${domain}"`);
+  }
+  
+  // Prevent directory separators
+  if (domain.includes('/') || domain.includes('\\')) {
+    throw new Error(`Invalid domain (contains path separators): "${domain}"`);
+  }
+  
+  // Check individual label length (max 63 chars per label)
+  const labels = domain.split('.');
+  for (const label of labels) {
+    if (label.length > 63) {
+      throw new Error(`Domain label too long: "${label}" (max 63 characters)`);
+    }
+  }
+  
+  return domain;
+}
+
+/**
+ * Sanitize DNS record name
+ * Prevents injection and validates format
+ * @param {string} name - Raw record name
+ * @returns {string} Sanitized record name
+ * @throws {Error} If name is invalid
+ */
+export function sanitizeRecordName(name) {
+  if (!name || typeof name !== 'string') {
+    throw new Error('Record name must be a string');
+  }
+  
+  // Allow @ for root domain (special case)
+  if (name === '@') {
+    return name;
+  }
+  
+  // Allow * for wildcard (special case)
+  if (name === '*') {
+    return name;
+  }
+  
+  // Remove whitespace and convert to lowercase
+  name = name.trim().toLowerCase();
+  
+  // Remove trailing dot if present
+  name = name.replace(/\.$/, '');
+  
+  // Check length (max 63 chars per label)
+  if (name.length > 63) {
+    throw new Error(`Record name too long: ${name.length} characters (max 63)`);
+  }
+  
+  if (name.length === 0) {
+    throw new Error('Record name cannot be empty');
+  }
+  
+  // Validate subdomain format (allow wildcards in first position)
+  const nameRegex = /^(?:\*\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+  if (!nameRegex.test(name)) {
+    throw new Error(`Invalid record name format: "${name}"`);
+  }
+  
+  // Prevent path traversal
+  if (name.includes('..')) {
+    throw new Error(`Invalid record name (path traversal): "${name}"`);
+  }
+  
+  // Prevent directory separators
+  if (name.includes('/') || name.includes('\\')) {
+    throw new Error(`Invalid record name (contains path separators): "${name}"`);
+  }
+  
+  return name;
+}
+
+/**
+ * Sanitize TTL value
+ * Prevents overflow and validates range
+ * @param {number|string} ttl - Raw TTL value
+ * @returns {number} Sanitized TTL value
+ * @throws {Error} If TTL is invalid
+ */
+export function sanitizeTTL(ttl) {
+  // Convert to number
+  const ttlNum = parseInt(ttl, 10);
+  
+  // Check if valid number
+  if (isNaN(ttlNum) || !Number.isFinite(ttlNum)) {
+    throw new Error(`Invalid TTL (not a number): "${ttl}"`);
+  }
+  
+  // Check if positive
+  if (ttlNum <= 0) {
+    throw new Error(`TTL must be positive: ${ttlNum}`);
+  }
+  
+  // Gandi's TTL range: 300 (5 min) to 2592000 (30 days)
+  if (ttlNum < 300) {
+    throw new Error(`TTL too low: ${ttlNum} (min 300 seconds / 5 minutes)`);
+  }
+  
+  if (ttlNum > 2592000) {
+    throw new Error(`TTL too high: ${ttlNum} (max 2592000 seconds / 30 days)`);
+  }
+  
+  return ttlNum;
+}
+
+/**
+ * Sanitize object for logging
+ * Redacts sensitive fields
+ * @param {Object} obj - Object to sanitize
+ * @returns {Object} Sanitized object
+ */
+export function sanitizeForLog(obj) {
+  if (!obj || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  const redacted = { ...obj };
+  const sensitiveFields = [
+    'phone', 'email', 'streetaddr', 'street', 'address',
+    'token', 'api_key', 'api_token', 'password', 'secret',
+    'authorization', 'bearer'
+  ];
+  
+  for (const field of sensitiveFields) {
+    if (redacted[field]) {
+      redacted[field] = '[REDACTED]';
+    }
+  }
+  
+  return redacted;
+}
+
+// ========================================
+// Validation Functions
+// ========================================
+
 /**
  * Validate DNS record value based on type
  * @param {string} type - Record type
