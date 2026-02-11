@@ -106,6 +106,30 @@ Comprehensive Gandi domain registrar integration for Moltbot.
 
 ### Step 2: Store Token
 
+Scripts check for credentials in priority order:
+1. **`GANDI_API_TOKEN` environment variable** (checked first)
+2. **`~/.config/gandi/api_token` file** (fallback if env var not set)
+
+**Choose the method that fits your workflow:**
+
+#### Option A: Environment Variable (Recommended for CI/CD)
+
+```bash
+# Set environment variable (replace YOUR_PAT with actual token)
+export GANDI_API_TOKEN="YOUR_PERSONAL_ACCESS_TOKEN"
+
+# Add to shell profile for persistence (~/.bashrc, ~/.zshrc, etc.)
+echo 'export GANDI_API_TOKEN="YOUR_PERSONAL_ACCESS_TOKEN"' >> ~/.bashrc
+```
+
+**Benefits:**
+- ✅ CI/CD friendly (standard pattern for automation)
+- ✅ Container-ready (no file mounts needed)
+- ✅ Works with secret management tools (1Password, Vault, etc.)
+- ✅ Easy to switch between multiple tokens
+
+#### Option B: File-based (Recommended for local development)
+
 ```bash
 # Create config directory
 mkdir -p ~/.config/gandi
@@ -116,6 +140,12 @@ echo "YOUR_PERSONAL_ACCESS_TOKEN" > ~/.config/gandi/api_token
 # Secure the file (owner read-only)
 chmod 600 ~/.config/gandi/api_token
 ```
+
+**Benefits:**
+- ✅ Token persists across shell sessions
+- ✅ Secure file permissions (0600 = owner read-only)
+- ✅ No risk of exposing token in process list
+- ✅ Works offline (no external dependencies)
 
 ### Step 3: Install Dependencies
 
