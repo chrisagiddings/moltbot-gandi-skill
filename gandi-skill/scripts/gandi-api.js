@@ -17,12 +17,32 @@ const CONTACT_FILE = path.join(CONFIG_DIR, 'contact.json');
 const DEFAULT_API_URL = 'https://api.gandi.net';
 
 /**
- * Read API token from config
+ * Read API token from environment or config file
+ * 
+ * Checks in priority order:
+ * 1. GANDI_API_TOKEN environment variable (CI/CD friendly)
+ * 2. ~/.config/gandi/api_token file (local development)
  */
 export function readToken() {
+  // Check environment variable first
+  if (process.env.GANDI_API_TOKEN) {
+    const token = process.env.GANDI_API_TOKEN.trim();
+    if (!token) {
+      throw new Error('GANDI_API_TOKEN environment variable is empty');
+    }
+    return token;
+  }
+  
+  // Fall back to file-based credential
   try {
     if (!fs.existsSync(TOKEN_FILE)) {
-      throw new Error(`Token file not found at ${TOKEN_FILE}\nCreate it with: echo "YOUR_PAT" > ${TOKEN_FILE} && chmod 600 ${TOKEN_FILE}`);
+      throw new Error(
+        `GANDI_API_TOKEN not found.\n\n` +
+        `Set environment variable:\n` +
+        `  export GANDI_API_TOKEN="your-gandi-pat"\n\n` +
+        `OR create token file:\n` +
+        `  echo "YOUR_PAT" > ${TOKEN_FILE} && chmod 600 ${TOKEN_FILE}`
+      );
     }
     
     const token = fs.readFileSync(TOKEN_FILE, 'utf8').trim();
