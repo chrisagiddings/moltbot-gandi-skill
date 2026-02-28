@@ -976,8 +976,15 @@ export function sanitizeRecordName(name) {
     throw new Error('Record name cannot be empty');
   }
   
-  // Validate subdomain format (allow wildcards in first position)
-  const nameRegex = /^(?:\*\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+  // Validate subdomain format
+  // Allow underscores anywhere in the name if it contains at least one label starting with _
+  // This handles service records like: _dmarc, resend._domainkey, _imap._tcp
+  const hasUnderscoreLabel = /(?:^|\.)_/.test(name);
+  
+  const nameRegex = hasUnderscoreLabel
+    ? /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*_[a-z0-9_.-]+$/  // Allow underscores if any label starts with _
+    : /^(?:\*\.)?(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;  // Strict for hostnames
+  
   if (!nameRegex.test(name)) {
     throw new Error(`Invalid record name format: "${name}"`);
   }
